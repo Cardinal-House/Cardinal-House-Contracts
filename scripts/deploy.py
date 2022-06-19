@@ -10,7 +10,7 @@ PROD_DEVELOPER_ADDRESS = "0x9406B17dE6949aB3F32e7c6044b0b29e1987f9ab"
 PROD_LIQUIDITY_ADDRESS = "0xB164Eb7844F3A05Fd3eF01CF05Ac4961a74D47fF"
 BURN_ADDRESS = "0x000000000000000000000000000000000000dEaD"
 
-PROD = True
+PROD = False
 
 def deploy_cardinal_house(memberGiveawayWalletAddress=None, marketingWalletAddress=None, developerWalletAddress=None, liquidityWalletAddress=None, burnWalletAddress=None):
     account = retrieve_account()
@@ -74,7 +74,7 @@ def deploy_cardinal_house(memberGiveawayWalletAddress=None, marketingWalletAddre
     cardinalHousePolling = CardinalHousePolling.deploy(cardinalToken.address, {"from": account}, publish_source=publishSource)
     transaction = cardinalHousePreSale.setToken(cardinalToken.address, {"from": account})
     transaction.wait(1)
-    print("Successfully set the Cardinal Token for the air drop.")
+    print("Successfully set the Cardinal Token for the presale.")
 
     return cardinalToken, cardinalHousePreSale, cardinalHousePolling
 

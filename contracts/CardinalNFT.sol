@@ -190,9 +190,9 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
         _tokenIds.increment();
         uint256 newItemId = _tokenIds.current();
 
-        _mint(msg.sender, newItemId);
         tokenIdToTypeId[newItemId] = typeId;
         tokenIdToListingFee[newItemId] = listingFee;
+        _mint(msg.sender, newItemId);
         _setTokenURI(newItemId, tokenURI);
         approve(address(this), newItemId);
         setApprovalForAll(marketplaceAddress, true);

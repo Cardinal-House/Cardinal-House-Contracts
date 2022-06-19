@@ -17,6 +17,10 @@ wallets:
   from_key_5: ${PRIVATE_KEY_5}
 
 networks:
+  polygon-main:
+    dex_router: ''
+  polygon-test:
+    dex_router: ''
   binance-testnet:
     dex_router: '0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3'
   bsc-test:
