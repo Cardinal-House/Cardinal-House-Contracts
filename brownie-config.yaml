@@ -18,9 +18,17 @@ wallets:
 
 networks:
   polygon-main:
-    dex_router: ''
+    dex_router: '0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff'
   polygon-test:
-    dex_router: ''
+    dex_router: '0x8954AfA98594b838bda56FE4C12a09D7739D179b'
+  polygon-moralis:
+    dex_router: '0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff'
+  polygon-test-moralis:
+    dex_router: '0x8954AfA98594b838bda56FE4C12a09D7739D179b'
+  polygon-custom:
+    dex_router: '0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff'
+  polygon-test-custom:
+    dex_router: '0x8954AfA98594b838bda56FE4C12a09D7739D179b'
   binance-testnet:
     dex_router: '0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3'
   bsc-test:

@@ -2,9 +2,9 @@ from brownie import network, config, CardinalNFT, CardinalHouseMarketplace
 from scripts.common_funcs import retrieve_account, LOCAL_BLOCKCHAIN_ENVIRONMENTS, DONT_PUBLISH_SOURCE_ENVIRONMENTS
 from web3 import Web3
 
-CARDINAL_TOKEN_ADDRESS_TEST = "0x10FB763CD76f5EBD130E085EdFe20e8A1209E762"
-CARDINAL_TOKEN_ADDRESS = "0x31832D10f68D3112d847Bd924331F3d182d268C4"
-PROD = False
+CARDINAL_TOKEN_ADDRESS_TEST = "0xBdf546E64EA72497687f56462adb8cAff1ca1655"
+CARDINAL_TOKEN_ADDRESS = "0xf5b618c106ABd01beAc194343B2768b903aF5acA"
+PROD = True
 
 def deploy_cardinal_house_marketplace(cardinalTokenAddress=None):
     account = retrieve_account()

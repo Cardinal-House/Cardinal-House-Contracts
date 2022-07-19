@@ -2,7 +2,7 @@ from brownie import network, config, CardinalToken, CardinalHousePreSale, Cardin
 from scripts.common_funcs import retrieve_account, LOCAL_BLOCKCHAIN_ENVIRONMENTS, DONT_PUBLISH_SOURCE_ENVIRONMENTS
 from web3 import Web3
 
-INITIAL_SUPPLY = Web3.toWei(1000000000, "ether")
+INITIAL_SUPPLY = Web3.toWei(10000000, "ether")
 
 PROD_MEMBER_GIVEAWAY_ADDRESS = "0x965C421073f0aD56a11b2E3aFB80C451038F6178"
 PROD_MARKETING_ADDRESS = "0x4abAc87EeC0AD0932B71037b5d1fc88B7aC2Defd"
@@ -10,13 +10,15 @@ PROD_DEVELOPER_ADDRESS = "0x9406B17dE6949aB3F32e7c6044b0b29e1987f9ab"
 PROD_LIQUIDITY_ADDRESS = "0xB164Eb7844F3A05Fd3eF01CF05Ac4961a74D47fF"
 BURN_ADDRESS = "0x000000000000000000000000000000000000dEaD"
 
-PROD = False
+PROD = True
 
 def deploy_cardinal_house(memberGiveawayWalletAddress=None, marketingWalletAddress=None, developerWalletAddress=None, liquidityWalletAddress=None, burnWalletAddress=None):
     account = retrieve_account()
 
     currNetwork = network.show_active()
+    print(currNetwork)
     if PROD and currNetwork in config["networks"] and "dex_router" in config["networks"][currNetwork]:
+        print("Setting production addresses...")
         memberGiveawayWalletAddress = PROD_MEMBER_GIVEAWAY_ADDRESS
         marketingWalletAddress = PROD_MARKETING_ADDRESS
         developerWalletAddress = PROD_DEVELOPER_ADDRESS
