@@ -5,6 +5,7 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import './CardinalToken.sol';
+import './CardinalNFT.sol';
 
 /**
  * @title Cardinal House Presale contract
@@ -15,6 +16,9 @@ contract CardinalHousePreSale is Ownable {
     // References the deployed Cardinal Token.
     CardinalToken public cardinalToken;
 
+    // References the deployed Cardinal NFT contract.
+    CardinalNFT public cardinalNFT;
+
     // Mapping to determine how many Cardinal Tokens each address has purchased in the presale.
     mapping(address => uint256) public addressToAmountPurchased;
 
@@ -23,6 +27,12 @@ contract CardinalHousePreSale is Ownable {
 
     // 1 Matic can be used to buy this many Cardinal Tokens.
     uint256 public MaticToCRNLRate = 52500;
+
+    // Determines the discount Cardinal House members get in the presale.
+    uint256 public memberDiscountAmount = 110;
+
+    // Determines if only members can participate in the presale - will be set to true for the first 24 hours of the presale.
+    bool public onlyMembers = false;
  
     /**
     * @dev Once the Cardinal Token contract is deployed, this function is used to set a reference to that token in this contract.
@@ -30,6 +40,14 @@ contract CardinalHousePreSale is Ownable {
      */
     function setToken(address payable CardinalTokenAddress) public onlyOwner {
         cardinalToken = CardinalToken(CardinalTokenAddress);
+    }
+
+    /**
+    * @dev Once the Cardinal NFT contract is deployed, this function is used to set a reference to that NFT contract for member discounts in the presale.
+    * @param CardinalNFTAddress address of the deployed Cardinal NFT contract.
+    */
+    function setCardinalNFT(address payable CardinalNFTAddress) public onlyOwner {
+        cardinalNFT = CardinalNFT(CardinalNFTAddress);
     }
 
     /**
@@ -60,8 +78,17 @@ contract CardinalHousePreSale is Ownable {
     * @dev Allows a user to pay Matic for Cardinal Tokens. Conversion rate is 1 Matic to MaticToCRNLRate Cardinal Tokens (CRNL) where MaticToCRNLRate is the variable defined in the contract.
      */
     function purchaseCardinalTokens() public payable {
+        if (onlyMembers) {
+            require(cardinalNFT.addressIsMember(msg.sender), "Only members can participate in the presale for the first 24 hours.");
+        }
+
         // 1 Matic = [MaticToCRNLRate] Cardinal Tokens to transfer to msg sender
         uint256 CardinalTokenAmount = msg.value * MaticToCRNLRate;
+
+        if (cardinalNFT.addressIsMember(msg.sender)) {
+            CardinalTokenAmount = CardinalTokenAmount * memberDiscountAmount / 100;
+        }
+
         require(addressToAmountPurchased[msg.sender] + CardinalTokenAmount <= purchaseCap,  "You cannot purchase this many Cardinal Tokens, that would put you past your presale cap.");
  
         cardinalToken.transfer(msg.sender, CardinalTokenAmount);
@@ -82,6 +109,22 @@ contract CardinalHousePreSale is Ownable {
      */
     function changeMaticToCardinalTokenRate(uint256 newConversionRate) public onlyOwner {
         MaticToCRNLRate = newConversionRate;
+    }
+
+    /**
+    * @dev Only owner function to change the member discount for the presale.
+    * @param newMemberDiscountAmount the new member discount - 10% off would be 110, 25% off would be 125, etc.
+    */
+    function changeMemberDiscountAmount(uint256 newMemberDiscountAmount) public onlyOwner {
+        memberDiscountAmount = newMemberDiscountAmount;
+    }
+
+    /**
+    * @dev Only owner function to change if only members can participate in the presale or if everyone can.
+    * @param newOnlyMembers true or false - determines if only members can participate in the presale.
+    */
+    function changeOnlyMembers(bool newOnlyMembers) public onlyOwner {
+        onlyMembers = newOnlyMembers;
     }
  
     /**

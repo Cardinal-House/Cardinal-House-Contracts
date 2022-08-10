@@ -10,6 +10,98 @@ import time
 LIQUIDITY_SUPPLY = Web3.toWei(3500000, "ether")
 ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
+def test_membership_discount():
+    # First, get the accounts and deploy the smart contracts.
+    account = retrieve_account()
+    account2 = retrieve_account(2)
+    account3 = retrieve_account(3)
+    account4 = retrieve_account(4)
+    account5 = retrieve_account(5)
+
+    cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house()
+    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
+    uniswapPair = cardinalToken.uniswapPair()
+    accountCardinalBalance = cardinalToken.balanceOf(account.address)
+    cardinalToken.transfer(uniswapPair, accountCardinalBalance / 2, {"from": account})
+    cardinalToken.setContractTokenDivisor(1, {"from": account})
+
+    NFTMembershipPrice = 5000
+    cardinalNFT.updateMembershipPrice(NFTMembershipPrice, {"from": account})
+
+    # Give some tokens to the accounts to purchase membership NFTs.
+    accountTokenAmount = 1000000000
+    cardinalToken.transfer(account2.address, 1000000000, {"from": account})
+    cardinalToken.transfer(account3.address, 1000000000, {"from": account})
+    cardinalToken.transfer(account4.address, 1000000000, {"from": account})
+    cardinalToken.transfer(account5.address, 1000000000, {"from": account})
+
+    # Approve the Cardinal NFT contract to spend the Cardinal Tokens to mint the membership NFTs.
+    cardinalToken.approve(cardinalNFT.address, NFTMembershipPrice * 10, {"from": account})
+    cardinalToken.approve(cardinalNFT.address, NFTMembershipPrice * 10, {"from": account2})
+    cardinalToken.approve(cardinalNFT.address, NFTMembershipPrice * 10, {"from": account3})
+    cardinalToken.approve(cardinalNFT.address, NFTMembershipPrice * 10, {"from": account4})
+    cardinalToken.approve(cardinalNFT.address, NFTMembershipPrice * 10, {"from": account5})
+
+    # Even owner can't add discount to member until owner is made admin
+    with pytest.raises(exceptions.VirtualMachineError) as ex:
+        cardinalNFT.setMemberDiscount(account2.address, 50, {"from": account})
+    assert "Only contract admins can set a membership discount." in str(ex.value)
+
+    # Non owner can't set admin user.
+    with pytest.raises(exceptions.VirtualMachineError) as ex:
+        cardinalNFT.setAdminUser(account2.address, True, {"from": account2})
+    assert "Ownable: caller is not the owner" in str(ex.value)
+
+    # Make the owner and account2 an admin.
+    cardinalNFT.setAdminUser(account.address, True, {"from": account})
+    cardinalNFT.setAdminUser(account2.address, True, {"from": account})
+
+    # Owner and account2 should be able to apply discounts now.
+    account2MembershipDiscount = 50
+    accountMembershipDiscount = 90
+    cardinalNFT.setMemberDiscount(account2.address, account2MembershipDiscount, {"from": account})
+    cardinalNFT.setMemberDiscount(account.address, accountMembershipDiscount, {"from": account2})
+
+    assert cardinalNFT.addressToMembershipDiscount(account2.address) == account2MembershipDiscount
+    assert cardinalNFT.addressToMembershipDiscount(account.address) == accountMembershipDiscount
+
+    # Owner can revoke admin rights for account2.
+    cardinalNFT.setAdminUser(account2.address, False, {"from": account})
+    with pytest.raises(exceptions.VirtualMachineError) as ex:
+        cardinalNFT.setMemberDiscount(account.address, 50, {"from": account2})
+    assert "Only contract admins can set a membership discount." in str(ex.value)
+
+    # Account2 can purchase a membership NFT using the discount set by the owner.
+    account2CRNLBalance = cardinalToken.balanceOf(account2.address)
+    cardinalNFT.mintMembershipNFT({"from": account2})
+
+    account2MembershipNFTID = 1
+    assert cardinalNFT.addressToMembershipDiscount(account2.address) == 0
+    assert cardinalNFT._tokenIds() == account2MembershipNFTID
+    assert cardinalNFT.tokenIdToTypeId(account2MembershipNFTID) == cardinalNFT.membershipTypeId()
+    assert cardinalNFT.ownerOf(account2MembershipNFTID) == account2.address
+
+    cardinalNFTPrice = cardinalNFT.membershipPriceInCardinalTokens()
+    
+    assert cardinalToken.balanceOf(account2.address) == account2CRNLBalance - (cardinalNFTPrice * account2MembershipDiscount / 100)
+
+    # Set up so that account2 gets charged again for membership NFT
+    account2CRNLBalance = cardinalToken.balanceOf(account2.address)
+    print(account2CRNLBalance)
+    membershipSecondsTillRecharge = 1000
+    epoch_time = chain.time()
+    cardinalNFT.updateMembershipNFTLastPaid(account2MembershipNFTID, epoch_time - membershipSecondsTillRecharge, {"from": account})
+
+    # Set discount for account2 for recharge
+    account2MembershipDiscount = 80
+    cardinalNFT.setMemberDiscount(account2.address, account2MembershipDiscount, {"from": account})
+
+    chargedMembers, chargedNFTIds, lostMembers, burntNFTs = charge_for_memberships(cardinalToken.address, cardinalNFT.address, cardinalHouseMarketplace.address, membershipSecondsTillRecharge)
+
+    assert cardinalNFT.addressToMembershipDiscount(account2.address) == 0
+    assert cardinalNFT.ownerOf(account2MembershipNFTID) == account2.address
+    assert cardinalToken.balanceOf(account2.address) == account2CRNLBalance - (cardinalNFTPrice * account2MembershipDiscount / 100)
+
 def test_charge_for_memberships_script():
     # First, get the accounts and deploy the smart contracts.
     account = retrieve_account()
@@ -18,8 +110,8 @@ def test_charge_for_memberships_script():
     account4 = retrieve_account(4)
     account5 = retrieve_account(5)
 
-    cardinalToken, _, _ = deploy_cardinal_house()
-    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address)
+    cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house()
+    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
     uniswapPair = cardinalToken.uniswapPair()
     accountCardinalBalance = cardinalToken.balanceOf(account.address)
     cardinalToken.transfer(uniswapPair, accountCardinalBalance / 2, {"from": account})
@@ -116,8 +208,8 @@ def test_users_can_mint_membership_NFTs():
     account = retrieve_account()
     account2 = retrieve_account(2)
 
-    cardinalToken, _, _ = deploy_cardinal_house()
-    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address)
+    cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house()
+    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
     uniswapPair = cardinalToken.uniswapPair()
     accountCardinalBalance = cardinalToken.balanceOf(account.address)
     cardinalToken.transfer(uniswapPair, accountCardinalBalance / 2, {"from": account})
@@ -166,8 +258,8 @@ def test_owner_can_create_and_send_membership_NFTs():
     account2 = retrieve_account(2)
     account3 = retrieve_account(3)
 
-    cardinalToken, _, _ = deploy_cardinal_house()
-    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address)
+    cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house()
+    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
     uniswapPair = cardinalToken.uniswapPair()
     accountCardinalBalance = cardinalToken.balanceOf(account.address)
     cardinalToken.transfer(uniswapPair, accountCardinalBalance / 2, {"from": account})
@@ -212,8 +304,8 @@ def test_owner_can_charge_for_membership_NFTs():
     account4 = retrieve_account(4)
     account5 = retrieve_account(5)
 
-    cardinalToken, _, _ = deploy_cardinal_house()
-    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address)
+    cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house()
+    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
     uniswapPair = cardinalToken.uniswapPair()
     accountCardinalBalance = cardinalToken.balanceOf(account.address)
     cardinalToken.transfer(uniswapPair, accountCardinalBalance / 2, {"from": account})
@@ -322,8 +414,8 @@ def test_owner_can_burn_membership_NFTs():
     account = retrieve_account()
     account2 = retrieve_account(2)
 
-    cardinalToken, _, _ = deploy_cardinal_house()
-    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address)
+    cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house()
+    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
     uniswapPair = cardinalToken.uniswapPair()
     accountCardinalBalance = cardinalToken.balanceOf(account.address)
     cardinalToken.transfer(uniswapPair, accountCardinalBalance / 2, {"from": account})
@@ -365,8 +457,8 @@ def test_cardinal_house_marketplace_whitelisting():
     account4 = retrieve_account(4)
     account5 = retrieve_account(5)
 
-    cardinalToken, _, _ = deploy_cardinal_house()
-    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address)
+    cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house()
+    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
     uniswapPair = cardinalToken.uniswapPair()
     accountCardinalBalance = cardinalToken.balanceOf(account.address)
     cardinalToken.transfer(uniswapPair, accountCardinalBalance / 2, {"from": account})
@@ -444,8 +536,8 @@ def test_cardinal_house_marketplace():
     account4 = retrieve_account(4)
     account5 = retrieve_account(5)
 
-    cardinalToken, _, _ = deploy_cardinal_house(account3.address, account4.address, account5.address, account5.address)
-    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address)
+    cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house(account3.address, account4.address, account5.address, account5.address)
+    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
     uniswapPair = cardinalToken.uniswapPair()
     account5CardinalBalance = cardinalToken.balanceOf(account5.address)
     cardinalToken.transfer(uniswapPair, account5CardinalBalance / 2, {"from": account5})

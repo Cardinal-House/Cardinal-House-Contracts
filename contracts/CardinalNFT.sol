@@ -42,6 +42,12 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
     // Maps each membership NFT ID to the last block timestamp that the membership was paid for.
     mapping(uint256 => uint256) public membershipNFTToLastPaid;
 
+    // Mapping to determine which addresses can add and remove other addresses from the member mapping.
+    mapping (address => bool) public addressIsAdmin;
+
+    // Mapping to determine membership discount for addresses.
+    mapping (address => uint256) public addressToMembershipDiscount;
+
     // The type ID for the Original Cardinal NFTs.
     uint256 public originalCardinalTypeId = 1;
 
@@ -123,10 +129,16 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
     * @return the ID of the newly minted membership NFT
      */
     function mintMembershipNFT() public returns (uint) {
-        require(cardinalToken.balanceOf(msg.sender) >= membershipPriceInCardinalTokens, "You don't have enough Cardinal Tokens to pay for the membership NFT.");
-        require(cardinalToken.allowance(msg.sender, address(this)) >= membershipPriceInCardinalTokens, "You haven't approved this contract to spend enough of your Cardinal Tokens to pay for the membership NFT.");
+        uint256 currMembershipPriceInCardinalTokens = membershipPriceInCardinalTokens;
+
+        if (addressToMembershipDiscount[msg.sender] > 0) {
+            currMembershipPriceInCardinalTokens = membershipPriceInCardinalTokens * addressToMembershipDiscount[msg.sender] / 100;
+        }
+
+        require(cardinalToken.balanceOf(msg.sender) >= currMembershipPriceInCardinalTokens, "You don't have enough Cardinal Tokens to pay for the membership NFT.");
+        require(cardinalToken.allowance(msg.sender, address(this)) >= currMembershipPriceInCardinalTokens, "You haven't approved this contract to spend enough of your Cardinal Tokens to pay for the membership NFT.");
         
-        cardinalToken.transferFrom(msg.sender, address(this), membershipPriceInCardinalTokens);
+        cardinalToken.transferFrom(msg.sender, address(this), currMembershipPriceInCardinalTokens);
 
         _tokenIds.increment();
         uint256 newItemId = _tokenIds.current();
@@ -135,6 +147,7 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
         tokenIdToListingFee[newItemId] = 0;
         _mint(msg.sender, newItemId);
         membershipNFTToLastPaid[newItemId] = block.timestamp;
+        addressToMembershipDiscount[msg.sender] = 0;
         _setTokenURI(newItemId, membershipTokenURI);
         approve(address(this), newItemId);
         setApprovalForAll(marketplaceAddress, true);
@@ -163,12 +176,20 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
         require(ownerOf(tokenId) == member, "This address doesn't own the NFT specified.");
         require(ownerOf(tokenId) != owner() && ownerOf(tokenId) != marketplaceAddress, "Can't charge the owner or marketplace for the membership.");
 
-        if (cardinalToken.balanceOf(member) < membershipPriceInCardinalTokens || cardinalToken.allowance(member, address(this)) < membershipPriceInCardinalTokens) {
+        uint256 currMembershipPriceInCardinalTokens = membershipPriceInCardinalTokens;
+
+        if (addressToMembershipDiscount[member] > 0) {
+            currMembershipPriceInCardinalTokens = membershipPriceInCardinalTokens * addressToMembershipDiscount[member] / 100;
+        }
+
+        if (cardinalToken.balanceOf(member) < currMembershipPriceInCardinalTokens || cardinalToken.allowance(member, address(this)) < currMembershipPriceInCardinalTokens) {
             burnMembershipNFT(tokenId);
             return 1;
         }
-        cardinalToken.transferFrom(member, address(this), membershipPriceInCardinalTokens);
+
+        cardinalToken.transferFrom(member, address(this), currMembershipPriceInCardinalTokens);
         membershipNFTToLastPaid[tokenId] = block.timestamp;
+        addressToMembershipDiscount[member] = 0;
         return 0;
     }
 
@@ -424,4 +445,43 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
         cardinalToken = CardinalToken(cardinalTokenAddress);
     }
 
+    /**
+    * @dev Only owner function to update the admin mapping.
+    * @param adminAddress the address to admin rights for
+    * @param isAdmin boolean to determine if the address is an admin or not
+    */
+    function setAdminUser(address adminAddress, bool isAdmin) public onlyOwner {
+        addressIsAdmin[adminAddress] = isAdmin;
+    }
+
+    /**
+    * @dev Allows contract admins to manually add an address as a member. Necessary for memberships purchased through Patreon.
+    * @param memberAddress the address of the member being added
+    */
+    function addMember(address memberAddress) public {
+        require(addressIsAdmin[msg.sender], "Only contract admins can add members.");
+
+        addressIsMember[memberAddress] = true;
+    }
+
+    /**
+    * @dev Allows contract admins to manually remove an address as a member. Necessary for when a membership bought through Patreon expires.
+    * @param memberAddress the address to remove from the membership list
+    */
+    function removeMember(address memberAddress) public {
+        require(addressIsAdmin[msg.sender], "Only contract admins can remove a member.");
+
+        addressIsMember[memberAddress] = false;
+    }
+
+    /**
+    * @dev Allows contract admins to set a membership discount for an address.
+    * @param memberAddress the address to give the discount to
+    * @param discountAmount the discount amount, 90 for 90% of membership price, 75 for 75% of membership price, etc.
+    */
+    function setMemberDiscount(address memberAddress, uint256 discountAmount) public {
+        require(addressIsAdmin[msg.sender], "Only contract admins can set a membership discount.");
+
+        addressToMembershipDiscount[memberAddress] = discountAmount;
+    }
 }
