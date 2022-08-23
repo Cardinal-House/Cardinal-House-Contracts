@@ -266,7 +266,7 @@ def test_owner_can_create_and_send_membership_NFTs():
     cardinalToken.setContractTokenDivisor(1, {"from": account})
 
     epoch_time = chain.time()
-    cardinalNFT.createToken("Test Membership NFT", cardinalNFT.membershipTypeId(), 0, {"from": account})
+    cardinalNFT.createToken("Test Membership NFT", cardinalNFT.membershipTypeId(), 0, epoch_time, {"from": account})
     tokenId = 1
 
     # Send the newly created membership NFT to account3 to then send to account2 since the owner account has special behaviors
@@ -343,18 +343,18 @@ def test_owner_can_charge_for_membership_NFTs():
     cardinalNFT.mintMembershipNFT({"from": account})
 
     with pytest.raises(exceptions.VirtualMachineError) as ex:
-        cardinalNFT.chargeMemberForMembership(account.address, 1, {"from": account})
+        cardinalNFT.chargeMemberForMembership(account.address, 1, epoch_time, {"from": account})
     assert "This address doesn't own the NFT specified." in str(ex.value)
 
     with pytest.raises(exceptions.VirtualMachineError) as ex:
-        cardinalNFT.chargeMemberForMembership(account.address, account1TokenId, {"from": account})
+        cardinalNFT.chargeMemberForMembership(account.address, account1TokenId, epoch_time, {"from": account})
     assert "Can't charge the owner or marketplace for the membership." in str(ex.value)
 
     # Send the membership NFTs owned by account to the marketplace to make sure the marketplace can't get charged
     cardinalNFT.transferFrom(account.address, cardinalHouseMarketplace.address, account1TokenId, {"from": account})
 
     with pytest.raises(exceptions.VirtualMachineError) as ex:
-        cardinalNFT.chargeMemberForMembership(cardinalHouseMarketplace.address, account1TokenId, {"from": account})
+        cardinalNFT.chargeMemberForMembership(cardinalHouseMarketplace.address, account1TokenId, epoch_time, {"from": account})
     assert "Can't charge the owner or marketplace for the membership." in str(ex.value)
 
     # Mine a few blocks so the membership paid timestamps are different than initial mint time
@@ -365,7 +365,8 @@ def test_owner_can_charge_for_membership_NFTs():
     # First test to make sure the membership NFT is burnt if the account with it can't afford it anymore
     cardinalToken.transfer(account.address, cardinalToken.balanceOf(account2.address), {"from": account2})
     account2InitialCRNLBalance = cardinalToken.balanceOf(account2.address)
-    chargeResult = cardinalNFT.chargeMemberForMembership(account2.address, account2TokenId, {"from": account})
+    epoch_time = chain.time()
+    chargeResult = cardinalNFT.chargeMemberForMembership(account2.address, account2TokenId, epoch_time, {"from": account})
 
     assert chargeResult.return_value == 1
     assert cardinalNFT.ownerOf(account2TokenId) == cardinalNFT.address
@@ -376,7 +377,8 @@ def test_owner_can_charge_for_membership_NFTs():
     # Second test the make sure the membership NFT is burnt if the allowance has run dry for the NFT contract to pull funds for the membership
     account3InitialCRNLBalance = cardinalToken.balanceOf(account3.address)
     cardinalToken.decreaseAllowance(cardinalNFT.address, cardinalToken.allowance(account3.address, cardinalNFT.address), {"from": account3})
-    chargeResult = cardinalNFT.chargeMemberForMembership(account3.address, account3TokenId, {"from": account})
+    epoch_time = chain.time()
+    chargeResult = cardinalNFT.chargeMemberForMembership(account3.address, account3TokenId, epoch_time, {"from": account})
 
     assert chargeResult.return_value == 1
     assert cardinalNFT.ownerOf(account3TokenId) == cardinalNFT.address
@@ -386,15 +388,15 @@ def test_owner_can_charge_for_membership_NFTs():
 
     # Third test the make sure funds are pulled for a membership NFT if the payment can actually go through and the NFT isn't burnt
     account4InitialCRNLBalance = cardinalToken.balanceOf(account4.address)
-    chargeResult = cardinalNFT.chargeMemberForMembership(account4.address, account4TokenId, {"from": account})
+    epoch_time = chain.time()
+    chargeResult = cardinalNFT.chargeMemberForMembership(account4.address, account4TokenId, epoch_time, {"from": account})
 
     assert chargeResult.return_value == 0
     assert cardinalNFT.ownerOf(account4TokenId) == account4.address
     assert cardinalNFT.addressIsMember(account4.address) == True
     assert account4TokenId in cardinalNFT.getMembershipTokenIds()
     assert cardinalToken.balanceOf(account4.address) == account4InitialCRNLBalance - cardinalNFT.membershipPriceInCardinalTokens()
-    assert abs(epoch_time - cardinalNFT.membershipNFTToLastPaid(account4TokenId)) > 8
-    assert abs(epoch_time - cardinalNFT.membershipNFTToLastPaid(account4TokenId)) <= 25
+    assert epoch_time == cardinalNFT.membershipNFTToLastPaid(account4TokenId)
 
     # Withdraw the funds from the NFT contract to the owner address.
     cardinalNFTContractCRNLBalance = cardinalToken.balanceOf(cardinalNFT.address)
@@ -472,11 +474,12 @@ def test_cardinal_house_marketplace_whitelisting():
 
     # Create Cardinal NFTs
     listingFee = Web3.toWei(0, "ether")
-    cardinalNFT.createToken("CRNL NFT 1", 2, listingFee, {"from": account})
-    cardinalNFT.createToken("CRNL NFT 2", 3, listingFee, {"from": account})
-    cardinalNFT.createToken("CRNL NFT 3", 4, listingFee, {"from": account})
-    cardinalNFT.createToken("CRNL NFT 4", 5, listingFee, {"from": account})
-    cardinalNFT.createToken("CRNL NFT 5", 6, listingFee, {"from": account})
+    epoch_time = chain.time()
+    cardinalNFT.createToken("CRNL NFT 1", 2, listingFee, epoch_time, {"from": account})
+    cardinalNFT.createToken("CRNL NFT 2", 3, listingFee, epoch_time, {"from": account})
+    cardinalNFT.createToken("CRNL NFT 3", 4, listingFee, epoch_time, {"from": account})
+    cardinalNFT.createToken("CRNL NFT 4", 5, listingFee, epoch_time, {"from": account})
+    cardinalNFT.createToken("CRNL NFT 5", 6, listingFee, epoch_time, {"from": account})
 
     # Whitelist the first NFT to account 2 (token ID = 1) and the second NFT to account 3 (token ID = 2)
     cardinalNFT.addWhiteListToToken(account2.address, 1)
@@ -545,7 +548,8 @@ def test_cardinal_house_marketplace():
 
     # Owner can create an NFT
     listingFee = Web3.toWei(0.02, "ether")
-    cardinalNFT.createToken("Test Token", 1, listingFee, {"from": account})
+    epoch_time = chain.time()
+    cardinalNFT.createToken("Test Token", 1, listingFee, epoch_time, {"from": account})
     tokenId = cardinalNFT._tokenIds()
     
     tokenOwner = cardinalNFT.ownerOf(tokenId)
@@ -560,7 +564,7 @@ def test_cardinal_house_marketplace():
 
     # Non-owner can't create an NFT
     with pytest.raises(exceptions.VirtualMachineError) as ex:
-        cardinalNFT.createToken("Test Token 2", 2, listingFee, {"from": account2})
+        cardinalNFT.createToken("Test Token 2", 2, listingFee, epoch_time, {"from": account2})
     assert "Ownable: caller is not the owner" in str(ex.value)
 
     # Owner can set the listing fee for the marketplace
@@ -721,7 +725,8 @@ def test_cardinal_house_marketplace():
     newDefaultListingFee = Web3.toWei(0, "ether")
     cardinalHouseMarketplace.setDefaultListingPrice(newDefaultListingFee, {"from": account})
     marketItemId += 1
-    cardinalNFT.createToken("Test Token", 1, listingFee, {"from": account})
+    epoch_time = chain.time()
+    cardinalNFT.createToken("Test Token", 1, listingFee, epoch_time, {"from": account})
     tokenId = cardinalNFT._tokenIds()
 
     with pytest.raises(exceptions.VirtualMachineError) as ex:

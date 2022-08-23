@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
  
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity 0.8.8;
  
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -65,6 +65,8 @@ contract CardinalToken is ERC20, Ownable {
     event memberGiveawayTransactionFeeUpdated(uint256 indexed transactionFeeAmount);
     event marketingTransactionFeeUpdated(uint256 indexed transactionFeeAmount);
     event developerTransactionFeeUpdated(uint256 indexed transactionFeeAmount);
+    event transactionFeesSwappedForMatic(uint256 indexed cardinalTokenAmount, uint256 indexed maticAmount);
+    event transactionFeeMaticDispersed(uint256 indexed marketingFee, uint256 indexed developerFee);
 
     // Initial token distribution:
     // 35% - Pre-sale
@@ -110,7 +112,7 @@ contract CardinalToken is ERC20, Ownable {
      * @dev Returns the contract address
      * @return contract address
      */
-    function getContractAddress() public view returns (address){
+    function getContractAddress() external view returns (address){
         return address(this);
     }
 
@@ -118,7 +120,7 @@ contract CardinalToken is ERC20, Ownable {
     * @dev Adds a user to be excluded from fees.
     * @param user address of the user to be excluded from fees.
      */
-    function excludeUserFromFees(address user) public onlyOwner {
+    function excludeUserFromFees(address user) external onlyOwner {
         excludedFromFees[user] = true;
     }
 
@@ -126,7 +128,7 @@ contract CardinalToken is ERC20, Ownable {
     * @dev Gets the current timestamp, used for testing + verification
     * @return the the timestamp of the current block
      */
-    function getCurrentTimestamp() public view returns (uint256) {
+    function getCurrentTimestamp() external view returns (uint256) {
         return block.timestamp;
     }
 
@@ -134,7 +136,7 @@ contract CardinalToken is ERC20, Ownable {
     * @dev Removes a user from the fee exclusion.
     * @param user address of the user than will now have to pay transaction fees.
      */
-    function includeUsersInFees(address user) public onlyOwner {
+    function includeUsersInFees(address user) external onlyOwner {
         excludedFromFees[user] = false;
     }
 
@@ -179,7 +181,7 @@ contract CardinalToken is ERC20, Ownable {
 
         if (_msgSender() != uniswapPair) {
             if (contractCardinalTokenBalance > balanceOf(uniswapPair) / contractTokenDivisor) {
-                swapCardinalTokensForMatic(contractCardinalTokenBalance);
+                swapCardinalTokensForMatic(contractCardinalTokenBalance, 0);
             }
                 
             uint256 contractMaticBalance = address(this).balance;
@@ -235,7 +237,7 @@ contract CardinalToken is ERC20, Ownable {
 
         if (_msgSender() != uniswapPair) {
             if (contractCardinalTokenBalance > balanceOf(uniswapPair) / contractTokenDivisor) {
-                swapCardinalTokensForMatic(contractCardinalTokenBalance);
+                swapCardinalTokensForMatic(contractCardinalTokenBalance, 0);
             }
                 
             uint256 contractMaticBalance = address(this).balance;
@@ -253,19 +255,22 @@ contract CardinalToken is ERC20, Ownable {
     /**
      * @dev Swaps Cardinal Tokens from transaction fees to Matic.
      * @param amount the amount of Cardinal Tokens to swap
+     * @param minimumAmountOut the minimum amount of Matic to receive from the swap 
      */
-    function swapCardinalTokensForMatic(uint256 amount) private {
+    function swapCardinalTokensForMatic(uint256 amount, uint256 minimumAmountOut) private {
         address[] memory path = new address[](2);
         path[0] = address(this);
         path[1] = uniswapRouter.WETH();
         _approve(address(this), address(uniswapRouter), amount);
         uniswapRouter.swapExactTokensForETHSupportingFeeOnTransferTokens(
             amount,
-            0,
+            minimumAmountOut,
             path,
             address(this),
             block.timestamp
         );
+
+        emit transactionFeesSwappedForMatic(amount, address(this).balance);
     }
 
     /**
@@ -274,14 +279,21 @@ contract CardinalToken is ERC20, Ownable {
      */
     function sendFeesToWallets(uint256 amount) private {
         uint256 totalFee = marketingFeePercent + developerFeePercent;
-        marketingWalletAddress.transfer((amount * marketingFeePercent) / totalFee);
-        developerWalletAddress.transfer((amount * developerFeePercent) / totalFee);
+        uint256 marketingFee = (amount * marketingFeePercent) / totalFee;
+        uint256 developerFee = (amount * developerFeePercent) / totalFee;
+
+        (bool marketingSuccess, ) = marketingWalletAddress.call{value: marketingFee}("");
+        require(marketingSuccess, "Failed to send Matic to marketing address");
+        (bool developerSuccess, ) = developerWalletAddress.call{value: developerFee}("");
+        require(developerSuccess, "Failed to send Matic to developer address");
+
+        emit transactionFeeMaticDispersed(marketingFee, developerFee);
     }
 
     /**
      * @dev Sends Matic to transaction fee wallets manually as opposed to happening automatically after a certain level of volume
      */
-    function disperseFeesManually() public onlyOwner {
+    function disperseFeesManually() external onlyOwner {
         uint256 contractMaticBalance = address(this).balance;
         sendFeesToWallets(contractMaticBalance);
     }
@@ -289,15 +301,16 @@ contract CardinalToken is ERC20, Ownable {
     /**
      * @dev Swaps all Cardinal Tokens in the contract for Matic and then disperses those funds to the transaction fee wallets.
      * @param amount the amount of Cardinal Tokens in the contract to swap for Matic
-     * @param useAmount boolean to determine if the amount sent in is swapped for Matic or if the entire contract balance is swapped.
+     * @param useAmount boolean to determine if the amount sent in is swapped for Matic or if the entire contract balance is swapped
+     * @param minimumAmountOut the minimum Matic output for the Cardinal Token swap
      */
-    function swapCardinalTokensForMaticManually(uint256 amount, bool useAmount) public onlyOwner {
+    function swapCardinalTokensForMaticManually(uint256 amount, bool useAmount, uint256 minimumAmountOut) external onlyOwner {
         if (useAmount) {
-            swapCardinalTokensForMatic(amount);
+            swapCardinalTokensForMatic(amount, minimumAmountOut);
         }
         else {
             uint256 contractCardinalTokenBalance = balanceOf(address(this));
-            swapCardinalTokensForMatic(contractCardinalTokenBalance);
+            swapCardinalTokensForMatic(contractCardinalTokenBalance, minimumAmountOut);
         }
 
         uint256 contractMaticBalance = address(this).balance;
@@ -310,7 +323,7 @@ contract CardinalToken is ERC20, Ownable {
      * @dev Sets the value that determines how many Cardinal Tokens need to be in the contract before it's swapped for Matic.
      * @param newDivisor the new divisor value to determine the swap threshold
      */
-    function setContractTokenDivisor(uint256 newDivisor) public onlyOwner {
+    function setContractTokenDivisor(uint256 newDivisor) external onlyOwner {
         contractTokenDivisor = newDivisor;
     }
 
@@ -319,7 +332,7 @@ contract CardinalToken is ERC20, Ownable {
     * @param user the address that is being added or removed from the blacklist
     * @param blacklisted a boolean that determines if the given address is being added or removed from the blacklist
     */
-    function updateBlackList(address user, bool blacklisted) public onlyOwner {
+    function updateBlackList(address user, bool blacklisted) external onlyOwner {
         blacklist[user] = blacklisted;
     }
 
@@ -327,7 +340,7 @@ contract CardinalToken is ERC20, Ownable {
     * @dev Function to update the member giveaway transaction fee - can't be more than 5 percent
     * @param newMemberGiveawayTransactionFee the new member giveaway transaction fee
     */
-    function updateMemberGiveawayTransactionFee(uint256 newMemberGiveawayTransactionFee) public onlyOwner {
+    function updateMemberGiveawayTransactionFee(uint256 newMemberGiveawayTransactionFee) external onlyOwner {
         require(newMemberGiveawayTransactionFee <= 5, "The member giveaway transaction fee can't be more than 5%.");
         memberGiveawayFeePercent = newMemberGiveawayTransactionFee;
         emit memberGiveawayTransactionFeeUpdated(newMemberGiveawayTransactionFee);
@@ -337,7 +350,7 @@ contract CardinalToken is ERC20, Ownable {
     * @dev Function to update the marketing transaction fee - can't be more than 5 percent
     * @param newMarketingTransactionFee the new marketing transaction fee
     */
-    function updateMarketingTransactionFee(uint256 newMarketingTransactionFee) public onlyOwner {
+    function updateMarketingTransactionFee(uint256 newMarketingTransactionFee) external onlyOwner {
         require(newMarketingTransactionFee <= 5, "The marketing transaction fee can't be more than 5%.");
         marketingFeePercent = newMarketingTransactionFee;
         emit marketingTransactionFeeUpdated(newMarketingTransactionFee);
@@ -347,7 +360,7 @@ contract CardinalToken is ERC20, Ownable {
     * @dev Function to update the developer transaction fee - can't be more than 5 percent
     * @param newDeveloperTransactionFee the new developer transaction fee
     */
-    function updateDeveloperTransactionFee(uint256 newDeveloperTransactionFee) public onlyOwner {
+    function updateDeveloperTransactionFee(uint256 newDeveloperTransactionFee) external onlyOwner {
         require(newDeveloperTransactionFee <= 5, "The developer transaction fee can't be more than 5%.");
         developerFeePercent = newDeveloperTransactionFee;
         emit developerTransactionFeeUpdated(newDeveloperTransactionFee);
@@ -358,7 +371,7 @@ contract CardinalToken is ERC20, Ownable {
     * @param user the address that will be added or removed as a minter
     * @param isMinter boolean representing if the address provided will be added or removed as a minter
     */
-    function updateMinter(address user, bool isMinter) public onlyOwner {
+    function updateMinter(address user, bool isMinter) external onlyOwner {
         minters[user] = isMinter;
     }
 
@@ -367,7 +380,7 @@ contract CardinalToken is ERC20, Ownable {
     * @param user the address that the tokens will be minted to
     * @param amount the amount of tokens to be minted to the user
     */
-    function mint(address user, uint256 amount) public {
+    function mint(address user, uint256 amount) external {
         require(minters[_msgSender()], "You are not authorized to mint Cardinal Tokens.");
         _mint(user, amount);
     }
@@ -377,7 +390,7 @@ contract CardinalToken is ERC20, Ownable {
     * @param user the address to burn the tokens from
     * @param amount the amount of tokens to be burned
     */
-    function burn(address user, uint256 amount) public {
+    function burn(address user, uint256 amount) external {
         require(minters[_msgSender()], "You are not authorized to burn Cardinal Tokens.");
         _burn(user, amount);
     }

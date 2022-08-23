@@ -1,4 +1,4 @@
-from brownie import network, config, CardinalNFT
+from brownie import network, config, chain, CardinalNFT
 from brownie.network.contract import Contract
 from scripts.common_funcs import retrieve_account
 from pathlib import Path
@@ -109,7 +109,8 @@ def mint_original_cardinal_NFTs(cardinalNFTAddress=None, mintToAddresses=mintToA
         tokenURIHash = response.json()["Hash"]
         newTokenURI = f"https://ipfs.infura.io/ipfs/{tokenURIHash}"
 
-        cardinalNFTContract.createToken(newTokenURI, cardinalNFTContract.originalCardinalTypeId(), 0, {"from": account})
+        epoch_time = chain.time()
+        cardinalNFTContract.createToken(newTokenURI, cardinalNFTContract.originalCardinalTypeId(), 0, epoch_time, {"from": account})
         cardinalNFTContract.transferFrom(account.address, currAddress, tokenIds[i], {"from": account})
         
         currOCNum += 1

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity 0.8.8;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -76,7 +76,7 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
   * @dev Gets the listing price for listing an NFT on the marketplace
   * @return the current listing price
   */
-  function getDefaultListingPrice() public view returns (uint256) {
+  function getDefaultListingPrice() external view returns (uint256) {
     return defaultListingPrice;
   }
 
@@ -84,7 +84,7 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
   * @dev Only owner function to set the listing price
   * @param newDefaultListingPrice the new default listing price
   */
-  function setDefaultListingPrice(uint256 newDefaultListingPrice) public onlyOwner {
+  function setDefaultListingPrice(uint256 newDefaultListingPrice) external onlyOwner {
       defaultListingPrice = newDefaultListingPrice;
   }
 
@@ -92,7 +92,7 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
   * @dev Only owner function to set the reference to the Cardinal Token (CRNL)
   * @param CardinalTokenAddress the contract address for the Cardinal Token
   */
-  function setCardinalToken(address payable CardinalTokenAddress) public onlyOwner {
+  function setCardinalToken(address payable CardinalTokenAddress) external onlyOwner {
       cardinalToken = CardinalToken(CardinalTokenAddress);
   }
 
@@ -100,7 +100,7 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
   * @dev Only owner function to set the reference to the Cardinal NFT contract
   * @param CardinalNFTAddress the address for the Cardinal NFT contract
   */
-  function setCardinalNFT(address payable CardinalNFTAddress) public onlyOwner {
+  function setCardinalNFT(address payable CardinalNFTAddress) external onlyOwner {
       cardinalNFT = CardinalNFT(CardinalNFTAddress);
       addressToPreviousNFTAddress[CardinalNFTAddress] = true;
   }
@@ -115,7 +115,7 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
     address nftContract,
     uint256 tokenId,
     uint256 price
-  ) public payable nonReentrant {
+  ) external payable nonReentrant {
     require(addressToPreviousNFTAddress[nftContract], "This isn't a valid Cardinal NFT contract.");
     require(!blacklist[msg.sender], "You have been blacklisted from the Cardinal House NFT marketplace. If you think this is an error, please contact the Cardinal House team.");
     require(price > 0, "The NFT price must be at least 1 wei.");
@@ -172,7 +172,7 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
     address nftContract,
     uint256 itemId,
     uint256 amountIn
-    ) public nonReentrant {
+    ) external nonReentrant {
     require(addressToPreviousNFTAddress[nftContract], "This isn't a valid Cardinal NFT contract.");
     require(!blacklist[msg.sender], "You have been blacklisted from the Cardinal House NFT marketplace. If you think this is an error, please contact the Cardinal House team.");
     require(!idToMarketItem[itemId].sold, "This marketplace item has already been sold.");
@@ -205,7 +205,7 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
   function cancelMarketSale(
     address nftContract,
     uint256 itemId
-    ) public nonReentrant {
+    ) external nonReentrant {
     require(addressToPreviousNFTAddress[nftContract], "This isn't a valid Cardinal NFT contract.");
     require(!blacklist[msg.sender], "You have been blacklisted from the Cardinal House NFT marketplace. If you think this is an error, please contact the Cardinal House team.");
     uint tokenId = idToMarketItem[itemId].tokenId;
@@ -227,7 +227,7 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
   * @dev Returns all unsold market items
   * @return the list of market items that haven't been sold
   */
-  function fetchMarketItems() public view returns (MarketItem[] memory) {
+  function fetchMarketItems() external view returns (MarketItem[] memory) {
     uint itemCount = _itemIds.current();
     uint unsoldItemCount = _itemIds.current() - _itemsSold.current();
     uint currentIndex = 0;
@@ -249,7 +249,7 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
   * @param user the user to fetch the NFTs for
   * @return the list of market items the user owners
   */
-  function fetchMyNFTs(address user) public view returns (MarketItem[] memory) {
+  function fetchMyNFTs(address user) external view returns (MarketItem[] memory) {
     uint totalItemCount = _itemIds.current();
     uint itemCount = 0;
     uint currentIndex = 0;
@@ -277,7 +277,7 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
   * @param user the user to fetch the items created for
   * @return the list of market items the user has put on the market
   */
-  function fetchItemsCreated(address user) public view returns (MarketItem[] memory) {
+  function fetchItemsCreated(address user) external view returns (MarketItem[] memory) {
     uint totalItemCount = _itemIds.current();
     uint itemCount = 0;
     uint currentIndex = 0;
@@ -305,7 +305,7 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
   * @param user the user to fetch the unsold market items for
   * @return the list of market items the user has put on the market that are currently for sale
   */
-  function fetchUnsoldItemsCreated(address user) public view returns (MarketItem[] memory) {
+  function fetchUnsoldItemsCreated(address user) external view returns (MarketItem[] memory) {
     uint totalItemCount = _itemIds.current();
     uint itemCount = 0;
     uint currentIndex = 0;
@@ -333,7 +333,7 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
   * @param user the address that is being added or removed from the blacklist
   * @param blacklisted a boolean that determines if the given address is being added or removed from the blacklist
   */
-  function updateBlackList(address user, bool blacklisted) public onlyOwner {
+  function updateBlackList(address user, bool blacklisted) external onlyOwner {
     blacklist[user] = blacklisted;
   }
 

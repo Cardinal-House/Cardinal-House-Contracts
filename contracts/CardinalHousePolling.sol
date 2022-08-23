@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
  
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity 0.8.8;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import './CardinalToken.sol';
@@ -64,7 +64,7 @@ contract CardinalHousePolling is Ownable {
     * @param pollTitle The title of the new poll.
     * @param proposalNames String array containing the names of all proposals for the new poll.
     */
-    function createNewPoll(string memory pollTitle, string[] memory proposalNames) public onlyOwner { 
+    function createNewPoll(string memory pollTitle, string[] memory proposalNames) external onlyOwner { 
         // All voters have now not voted.
         for (uint256 i = 0; i < voters.length; i++) {
             voted[voters[i]] = false;
@@ -90,7 +90,7 @@ contract CardinalHousePolling is Ownable {
     /**
     * @dev Only owner function to close the poll and add it to the list of previous polls.
     */
-    function closePoll() public onlyOwner {
+    function closePoll() external onlyOwner {
         require(votingOpen, "There isn't a poll to close currently.");
 
         votingOpen = false;
@@ -118,7 +118,7 @@ contract CardinalHousePolling is Ownable {
     * @dev Voting function that allows a user to vote in the current poll.
     * @param proposal The index of the proposal in the poll's proposal array.
     */
-    function vote(uint proposal) public {
+    function vote(uint proposal) external {
         require(votingOpen, "There isn't a poll going on currently.");
         require(!voted[msg.sender], "You have already voted in this poll.");
         require(proposal >= 0, "Your proposal number is invalid.");
@@ -162,7 +162,7 @@ contract CardinalHousePolling is Ownable {
      * @dev Gets the number of proposals in the current poll.
      * @return numProposals the number of proposals in the current poll.
     */
-    function getNumberOfProposals() public view returns (uint numProposals) {
+    function getNumberOfProposals() external view returns (uint numProposals) {
         return proposals.length;
     }
 
@@ -172,7 +172,7 @@ contract CardinalHousePolling is Ownable {
      * @param proposalIndex The index of the proposal in the previous poll's proposal array.
      * @return proposal the proposal from the previous poll.
     */
-    function getPastProposal(uint pastPollIndex, uint proposalIndex) public view returns (Proposal memory proposal) {
+    function getPastProposal(uint pastPollIndex, uint proposalIndex) external view returns (Proposal memory proposal) {
         proposal = pastPolls[pastPollIndex].proposals[proposalIndex];
     }
 }

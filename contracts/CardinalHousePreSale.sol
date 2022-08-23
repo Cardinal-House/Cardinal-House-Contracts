@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
  
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity 0.8.8;
  
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
@@ -38,7 +38,7 @@ contract CardinalHousePreSale is Ownable {
     * @dev Once the Cardinal Token contract is deployed, this function is used to set a reference to that token in this contract.
     * @param CardinalTokenAddress address of the Cardinal Token.
      */
-    function setToken(address payable CardinalTokenAddress) public onlyOwner {
+    function setToken(address payable CardinalTokenAddress) external onlyOwner {
         cardinalToken = CardinalToken(CardinalTokenAddress);
     }
 
@@ -46,7 +46,7 @@ contract CardinalHousePreSale is Ownable {
     * @dev Once the Cardinal NFT contract is deployed, this function is used to set a reference to that NFT contract for member discounts in the presale.
     * @param CardinalNFTAddress address of the deployed Cardinal NFT contract.
     */
-    function setCardinalNFT(address payable CardinalNFTAddress) public onlyOwner {
+    function setCardinalNFT(address payable CardinalNFTAddress) external onlyOwner {
         cardinalNFT = CardinalNFT(CardinalNFTAddress);
     }
 
@@ -54,7 +54,7 @@ contract CardinalHousePreSale is Ownable {
     * @dev Gets the amount of Cardinal Tokens the sender owns.
     * @return the Cardinal Token balance of the sender
     */
-    function getUserBalance() public view returns (uint256) {
+    function getUserBalance() external view returns (uint256) {
         return cardinalToken.balanceOf(msg.sender);
     }
  
@@ -62,7 +62,7 @@ contract CardinalHousePreSale is Ownable {
      * @dev Returns the contract address
      * @return contract address
      */
-    function getContractAddress() public view returns (address) {
+    function getContractAddress() external view returns (address) {
         return address(this);
     }
  
@@ -70,14 +70,14 @@ contract CardinalHousePreSale is Ownable {
      * @dev Returns the Cardinal Token address
      * @return Cardinal Token contract address
      */
-    function getTokenAddress() public view returns (address) {
+    function getTokenAddress() external view returns (address) {
         return cardinalToken.getContractAddress();
     }
  
     /**
     * @dev Allows a user to pay Matic for Cardinal Tokens. Conversion rate is 1 Matic to MaticToCRNLRate Cardinal Tokens (CRNL) where MaticToCRNLRate is the variable defined in the contract.
      */
-    function purchaseCardinalTokens() public payable {
+    function purchaseCardinalTokens() external payable {
         if (onlyMembers) {
             require(cardinalNFT.addressIsMember(msg.sender), "Only members can participate in the presale for the first 24 hours.");
         }
@@ -99,7 +99,7 @@ contract CardinalHousePreSale is Ownable {
     * @dev Only owner function to change the presale Cardinal Token purchase cap per user.
     * @param newPurchaseCap the new Cardinal Token purchase cap in CRNL (NOT Matic). Use the conversion rate to figure out how many Cardinal Tokens to set here.
      */
-    function changeCardinalTokenPurchaseCap(uint256 newPurchaseCap) public onlyOwner {
+    function changeCardinalTokenPurchaseCap(uint256 newPurchaseCap) external onlyOwner {
         purchaseCap = newPurchaseCap;
     }
 
@@ -107,7 +107,7 @@ contract CardinalHousePreSale is Ownable {
     * @dev Only owner function to change the conversion rate for Matic to Cardinal Token.
     * @param newConversionRate the new Matic to Cardinal Token conversion rate.
      */
-    function changeMaticToCardinalTokenRate(uint256 newConversionRate) public onlyOwner {
+    function changeMaticToCardinalTokenRate(uint256 newConversionRate) external onlyOwner {
         MaticToCRNLRate = newConversionRate;
     }
 
@@ -115,7 +115,7 @@ contract CardinalHousePreSale is Ownable {
     * @dev Only owner function to change the member discount for the presale.
     * @param newMemberDiscountAmount the new member discount - 10% off would be 110, 25% off would be 125, etc.
     */
-    function changeMemberDiscountAmount(uint256 newMemberDiscountAmount) public onlyOwner {
+    function changeMemberDiscountAmount(uint256 newMemberDiscountAmount) external onlyOwner {
         memberDiscountAmount = newMemberDiscountAmount;
     }
 
@@ -123,7 +123,7 @@ contract CardinalHousePreSale is Ownable {
     * @dev Only owner function to change if only members can participate in the presale or if everyone can.
     * @param newOnlyMembers true or false - determines if only members can participate in the presale.
     */
-    function changeOnlyMembers(bool newOnlyMembers) public onlyOwner {
+    function changeOnlyMembers(bool newOnlyMembers) external onlyOwner {
         onlyMembers = newOnlyMembers;
     }
  
@@ -131,7 +131,7 @@ contract CardinalHousePreSale is Ownable {
     * @dev Only owner function to withdraw the Matic from this contract.
     * @param amount the amount of Matic to withdraw from the pre-sale contract.
      */
-    function withdrawMatic(uint256 amount) public onlyOwner {
+    function withdrawMatic(uint256 amount) external onlyOwner {
         (bool success, ) = msg.sender.call{value: amount}("");
         require(success, "Failed to send Matic");
     }
@@ -140,7 +140,7 @@ contract CardinalHousePreSale is Ownable {
     * @dev Gets the amount of Matic that the contract has.
     * @return the amount of Matic the contract has.
      */
-    function getContractMatic() public view returns(uint256) {
+    function getContractMatic() external view returns(uint256) {
         return address(this).balance;
     }
  
@@ -148,7 +148,7 @@ contract CardinalHousePreSale is Ownable {
     * @dev Gets the Cardinal Token balance of the contract.
     * @return the amount of Cardinal Tokens the contract has.
      */
-    function getContractTokens() public view returns(uint256) {
+    function getContractTokens() external view returns(uint256) {
         return cardinalToken.balanceOf(address(this));
     }
 }

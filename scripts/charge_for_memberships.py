@@ -59,7 +59,7 @@ def charge_for_memberships(cardinalTokenAddress=None, cardinalNFTAddress=None, c
             membershipLastPaidTimestamp = cardinalNFT.membershipNFTToLastPaid(membershipNFTId)
 
             if epoch_time - membershipLastPaidTimestamp >= membershipSecondsTillRecharge:
-                chargeResult = cardinalNFT.chargeMemberForMembership(NFTOwner, membershipNFTId, {"from": account})
+                chargeResult = cardinalNFT.chargeMemberForMembership(NFTOwner, membershipNFTId, epoch_time, {"from": account})
 
                 if chargeResult.return_value == 0:
                     chargedMembers.append(NFTOwner)
