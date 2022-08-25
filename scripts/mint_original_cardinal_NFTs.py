@@ -7,6 +7,7 @@ import requests
 import math
 import json
 import csv
+import os
 
 CARDINAL_NFT_ADDRESS_TEST = "0x92259eB95029965d82edf81A996Add27c6b6a54a"
 CARDINAL_NFT_ADDRESS = "0x94E2c821Fe8c7953595544e3DA4500cCC157FCa4"
@@ -80,6 +81,9 @@ tokenIds = [
 
 startOCNum = 1
 
+projectId = os.environ["InfuraCardinalHouseProjectId"]
+projectSecret = os.environ["InfuraCardinalHouseProjectSecret"]
+
 def mint_original_cardinal_NFTs(cardinalNFTAddress=None, mintToAddresses=mintToAddresses, images=images, startOCNum=startOCNum):
     account = retrieve_account()
 
@@ -108,7 +112,7 @@ def mint_original_cardinal_NFTs(cardinalNFTAddress=None, mintToAddresses=mintToA
 
         with open(currImage, "rb") as imageFile:
             files = {'file': imageFile}
-            response = requests.post('https://ipfs.infura.io:5001/api/v0/add', files=files)
+            response = requests.post('https://ipfs.infura.io:5001/api/v0/add', files=files, auth=(projectId, projectSecret))
             imageHash = response.json()["Hash"]
             
             currImageURL = f"https://ipfs.infura.io/ipfs/{imageHash}"
@@ -120,7 +124,7 @@ def mint_original_cardinal_NFTs(cardinalNFTAddress=None, mintToAddresses=mintToA
         }
 
         files = {'file': str(currTokenURI).replace("\'", "\"")}
-        response = requests.post('https://ipfs.infura.io:5001/api/v0/add', files=files)
+        response = requests.post('https://ipfs.infura.io:5001/api/v0/add', files=files, auth=(projectId, projectSecret))
         tokenURIHash = response.json()["Hash"]
         newTokenURI = f"https://ipfs.infura.io/ipfs/{tokenURIHash}"
 
