@@ -21,6 +21,9 @@ contract CardinalToken is ERC20, Ownable {
     // Mapping to determine which addresses can mint Cardinal Tokens for bridging.
     mapping (address => bool) public minters;
 
+    // Mapping to determine which addresses are pair addresses.
+    mapping (address => bool) public pairAddresses;
+
     // Address of the contract for burning Cardinal Tokens.
     address public burnWalletAddress;
 
@@ -61,7 +64,7 @@ contract CardinalToken is ERC20, Ownable {
     // Determines how many Cardinal Tokens this contract needs before it swaps for Matic to pay fee wallets.
     uint256 public contractTokenDivisor = 1000;
 
-    // Events to emit when the transaction fees are updated
+    // Events to emit when the transaction fees are updated or transaction fee tokens are sold and dispersed
     event memberGiveawayTransactionFeeUpdated(uint256 indexed transactionFeeAmount);
     event marketingTransactionFeeUpdated(uint256 indexed transactionFeeAmount);
     event developerTransactionFeeUpdated(uint256 indexed transactionFeeAmount);
@@ -106,6 +109,8 @@ contract CardinalToken is ERC20, Ownable {
             _approve(address(this), address(uniswapRouter), initialSupply);
             uniswapPair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
             IERC20(uniswapPair).approve(address(uniswapRouter), type(uint256).max);
+
+            pairAddresses[uniswapPair] = true;
     }
 
     /**
@@ -152,9 +157,9 @@ contract CardinalToken is ERC20, Ownable {
         // Ensure the recipient isn't blacklisted.
         require(!blacklist[recipient], "The address you are trying to send Cardinal Tokens to has been blacklisted from trading the Cardinal Token. If you think this is an error, please contact the Cardinal House team.");
 
-        // Stops investors from owning more than 2% of the total supply from purchasing Cardinal Tokens from the DEX.
-        if (_msgSender() == uniswapPair && !excludedFromFees[_msgSender()] && !excludedFromFees[recipient]) {
-            require((balanceOf(recipient) + amount) < (totalSupply() / 166), "You can't have more than 2% of the total Cardinal Token supply after a DEX swap.");
+        // Stops investors from owning more than 5% of the total supply from purchasing Cardinal Tokens from the DEX.
+        if (pairAddresses[_msgSender()] && !excludedFromFees[_msgSender()] && !excludedFromFees[recipient]) {
+            require((balanceOf(recipient) + amount) < (totalSupply() / 20), "You can't have more than 5% of the total Cardinal Token supply after a DEX swap.");
         }
 
         // If the sender or recipient is excluded from fees, perform the default transfer.
@@ -176,10 +181,14 @@ contract CardinalToken is ERC20, Ownable {
         // Sends the transaction fees to the giveaway wallet and contract address
         _transfer(_msgSender(), memberGiveawayWalletAddress, memberGiveawayFee);
         _transfer(_msgSender(), address(this), contractFee);
+ 
+        // Sends [initial amount] - [fees] to the recipient
+        uint256 valueAfterFees = amount - contractFee - memberGiveawayFee;
+        _transfer(_msgSender(), recipient, valueAfterFees);
 
         uint256 contractCardinalTokenBalance = balanceOf(address(this));
 
-        if (_msgSender() != uniswapPair) {
+        if (!pairAddresses[_msgSender()]) {
             if (contractCardinalTokenBalance > balanceOf(uniswapPair) / contractTokenDivisor) {
                 swapCardinalTokensForMatic(contractCardinalTokenBalance, 0);
             }
@@ -189,10 +198,7 @@ contract CardinalToken is ERC20, Ownable {
                 sendFeesToWallets(address(this).balance);
             }
         }
- 
-        // Sends [initial amount] - [fees] to the recipient
-        uint256 valueAfterFees = amount - contractFee - memberGiveawayFee;
-        _transfer(_msgSender(), recipient, valueAfterFees);
+
         return true;
     }
 
@@ -232,10 +238,14 @@ contract CardinalToken is ERC20, Ownable {
         _spendAllowance(from, _msgSender(), amount);
         _transfer(from, memberGiveawayWalletAddress, memberGiveawayFee);
         _transfer(from, address(this), contractFee);
+ 
+        // Sends [initial amount] - [fees] to the recipient
+        uint256 valueAfterFees = amount - contractFee - memberGiveawayFee;
+        _transfer(from, to, valueAfterFees);
 
         uint256 contractCardinalTokenBalance = balanceOf(address(this));
 
-        if (_msgSender() != uniswapPair) {
+        if (!pairAddresses[_msgSender()]) {
             if (contractCardinalTokenBalance > balanceOf(uniswapPair) / contractTokenDivisor) {
                 swapCardinalTokensForMatic(contractCardinalTokenBalance, 0);
             }
@@ -245,10 +255,7 @@ contract CardinalToken is ERC20, Ownable {
                 sendFeesToWallets(address(this).balance);
             }
         }
- 
-        // Sends [initial amount] - [fees] to the recipient
-        uint256 valueAfterFees = amount - contractFee - memberGiveawayFee;
-        _transfer(from, to, valueAfterFees);
+
         return true;
     }
 
@@ -367,6 +374,15 @@ contract CardinalToken is ERC20, Ownable {
     }
 
     /**
+    * @dev Only owner function to add/remove an address as a pair address.
+    * @param pairAddr the pair address to either add or remove as a pair
+    * @param isPairAddress boolean to determine if the address is now a pair or no longer a pair
+    */
+    function addOrRemovePairAddress(address pairAddr, bool isPairAddress) external onlyOwner {
+        pairAddresses[pairAddr] = isPairAddress;
+    }
+
+    /**
     * @dev Function to add or remove a Cardinal Token minter
     * @param user the address that will be added or removed as a minter
     * @param isMinter boolean representing if the address provided will be added or removed as a minter
@@ -376,7 +392,7 @@ contract CardinalToken is ERC20, Ownable {
     }
 
     /**
-    * @dev Minter only function to mint new Cardinal Tokens for bridging
+    * @dev Minter only function to mint new Cardinal Tokens for bridging ONLY
     * @param user the address that the tokens will be minted to
     * @param amount the amount of tokens to be minted to the user
     */
@@ -386,7 +402,7 @@ contract CardinalToken is ERC20, Ownable {
     }
 
     /**
-    * @dev Minter only function to burn Cardinal Tokens for bridging and deflation upon service purchases with the Cardinal Token
+    * @dev Minter only function to burn Cardinal Tokens for bridging and deflation upon service purchases with the Cardinal Token ONLY
     * @param user the address to burn the tokens from
     * @param amount the amount of tokens to be burned
     */

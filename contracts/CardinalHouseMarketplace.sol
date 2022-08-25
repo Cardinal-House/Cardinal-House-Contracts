@@ -49,6 +49,12 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
   // If this mapping is true for an address then they can't use the marketplace.
   mapping (address => bool) public blacklist;
 
+  // References the deployed Cardinal Token.
+  CardinalToken public cardinalToken;
+
+  // References the deployed Cardinal NFT contract.
+  CardinalNFT public cardinalNFT;
+
   // Event emitted whenever a Cardinal NFT is put up for sale on the Cardinal House marketplace.
   event MarketItemCreated (
     uint indexed itemId,
@@ -62,11 +68,33 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
     uint256 listingPrice
   );
 
-  // References the deployed Cardinal Token.
-  CardinalToken public cardinalToken;
+  // Event emitted whenever a Cardinal NFT is sold on the Cardinal House marketplace.
+  event MarketItemSold (
+    uint indexed itemId,
+    address indexed nftContract,
+    uint256 indexed tokenId,
+    address seller,
+    address owner,
+    uint256 price,
+    bool sold,
+    string tokenURI,
+    uint256 listingPrice
+  );
 
-  // References the deployed Cardinal NFT contract.
-  CardinalNFT public cardinalNFT;
+  // Event emitted whenever a Cardinal NFT sale is canceled on the Cardinal House marketplace.
+  event MarketItemSaleCanceled (
+    uint indexed itemId,
+    address indexed nftContract,
+    uint256 indexed tokenId,
+    address seller,
+    address owner,
+    uint256 price,
+    bool sold,
+    string tokenURI,
+    uint256 listingPrice
+  );
+
+  event defaultListingpriceUpdated(uint256 indexed newDefaultListingPrice);
 
   constructor(address payable CardinalTokenAddress) {
     cardinalToken = CardinalToken(CardinalTokenAddress);
@@ -86,6 +114,7 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
   */
   function setDefaultListingPrice(uint256 newDefaultListingPrice) external onlyOwner {
       defaultListingPrice = newDefaultListingPrice;
+      emit defaultListingpriceUpdated(newDefaultListingPrice);
   }
 
   /**
@@ -187,14 +216,26 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
 
     cardinalToken.transferFrom(msg.sender, idToMarketItem[itemId].seller, amountIn);
 
-    IERC721(nftContract).transferFrom(address(this), msg.sender, tokenId);
     idToMarketItem[itemId].owner = payable(msg.sender);
     idToMarketItem[itemId].sold = true;
+    IERC721(nftContract).transferFrom(address(this), msg.sender, tokenId);
     _itemsSold.increment();
 
     if (idToMarketItem[itemId].seller != owner() && idToMarketItem[itemId].listingPrice > 0) {
       payable(owner()).transfer(idToMarketItem[itemId].listingPrice);
     }
+
+    emit MarketItemSold(
+      itemId,
+      nftContract,
+      tokenId,
+      idToMarketItem[itemId].seller,
+      msg.sender,
+      price,
+      true,
+      IERC721Metadata(nftContract).tokenURI(tokenId),
+      idToMarketItem[itemId].listingPrice
+    );
   }
 
   /**
@@ -214,13 +255,26 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
     require(itemSeller == msg.sender || msg.sender == owner(), "You can only cancel your own NFT listings.");
     require(!itemSold, "This NFT has already been sold.");
 
-    IERC721(nftContract).transferFrom(address(this), idToMarketItem[itemId].seller, tokenId);
     idToMarketItem[itemId].owner = payable(idToMarketItem[itemId].seller);
     idToMarketItem[itemId].sold = true;
+    IERC721(nftContract).transferFrom(address(this), idToMarketItem[itemId].seller, tokenId);
+
     _itemsSold.increment();
     if (idToMarketItem[itemId].seller != owner() && idToMarketItem[itemId].listingPrice > 0) {
         payable(idToMarketItem[itemId].seller).transfer(idToMarketItem[itemId].listingPrice);
     }
+
+    emit MarketItemSaleCanceled(
+      itemId,
+      nftContract,
+      tokenId,
+      itemSeller,
+      itemSeller,
+      idToMarketItem[itemId].price,
+      true,
+      IERC721Metadata(nftContract).tokenURI(tokenId),
+      idToMarketItem[itemId].listingPrice
+    );
   }
 
   /**

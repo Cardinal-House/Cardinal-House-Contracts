@@ -69,6 +69,14 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
     // The current price of the membership NFT in Cardinal Tokens
     uint256 public membershipPriceInCardinalTokens;
 
+    event membershipNFTMinted(address indexed owner, uint256 indexed tokenId);
+    event memberChargedForMembership(address indexed member, uint256 indexed tokenId, uint256 membershipPrice, uint256 currTimeStamp);
+    event membershipNFTBurnt(address indexed owner, uint256 indexed tokenId);
+    event tokenURIUpdated(uint256 indexed tokenId, string newTokenURI);
+    event membershipPriceUpdated(uint256 indexed newMembershipPrice);
+    event typeIdUpdated(string indexed typeIdThatWasUpdated, uint256 indexed newTypeId);
+    event memberDiscountSet(address indexed member, uint256 indexed discountAmount);
+
     constructor(address _marketplaceAddress, address payable _cardinalTokenAddress) ERC721("CardinalHouseNFT", "CRNLNFT") {
         marketplaceAddress = _marketplaceAddress;
         cardinalToken = CardinalToken(_cardinalTokenAddress);
@@ -83,6 +91,8 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
             if (membershipTokenIds[i] == tokenId) {
                 address NFTOwner = ownerOf(membershipTokenIds[i]);
                 _transfer(NFTOwner, address(this), membershipTokenIds[i]);
+
+                emit membershipNFTBurnt(NFTOwner, tokenId);
 
                 membershipTokenIds[i] = membershipTokenIds[membershipTokenIds.length-1];
                 membershipTokenIds.pop();
@@ -154,6 +164,8 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
 
         membershipTokenIds.push(newItemId);
 
+        emit membershipNFTMinted(msg.sender, newItemId);
+
         return newItemId;
     }
 
@@ -199,6 +211,8 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
 
         addressToMembershipDiscount[member] = 0;
 
+        emit memberChargedForMembership(member, tokenId, currMembershipPriceInCardinalTokens, currTimeStamp);
+
         return 0;
     }
 
@@ -211,20 +225,20 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
 
     /**
     * @dev Only owner function to mint a new NFT.
-    * @param tokenURI the token URI on IPFS for the NFT metadata
+    * @param newTokenURI the token URI on IPFS for the NFT metadata
     * @param typeId the type ID of the NFT to distinguish what type of NFT it is (Original Cardinal, membership, service)
     * @param listingFee the fee the user pays when putting the NFT for sale on the marketplace
     * @param currTimeStamp the current timestamp for the transaction to avoid relying on block.timestamp
     * @return the ID of the newly minted NFT
      */
-    function createToken(string memory tokenURI, uint256 typeId, uint256 listingFee, uint256 currTimeStamp) external onlyOwner returns (uint) {
+    function createToken(string memory newTokenURI, uint256 typeId, uint256 listingFee, uint256 currTimeStamp) external onlyOwner returns (uint) {
         _tokenIds.increment();
         uint256 newItemId = _tokenIds.current();
 
         tokenIdToTypeId[newItemId] = typeId;
         tokenIdToListingFee[newItemId] = listingFee;
         _mint(msg.sender, newItemId);
-        _setTokenURI(newItemId, tokenURI);
+        _setTokenURI(newItemId, newTokenURI);
         approve(address(this), newItemId);
         setApprovalForAll(marketplaceAddress, true);
 
@@ -252,6 +266,7 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
      */
     function setTokenURI(uint256 tokenId, string memory newTokenURI) external onlyOwner {
         _setTokenURI(tokenId, newTokenURI);
+        emit tokenURIUpdated(tokenId, newTokenURI);
     }
 
     /**
@@ -419,6 +434,7 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
      */
     function updateOriginalCardinalTypeId(uint256 newOriginalCardinalTypeId) external onlyOwner {
         originalCardinalTypeId = newOriginalCardinalTypeId;
+        emit typeIdUpdated("originalCardinalTypeId", newOriginalCardinalTypeId);
     }
 
     /**
@@ -427,6 +443,7 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
      */
     function updateMembershipTypeId(uint256 newMembershipTypeId) external onlyOwner {
         membershipTypeId = newMembershipTypeId;
+        emit typeIdUpdated("membershipTypeId", newMembershipTypeId);
     }
 
     /**
@@ -435,6 +452,7 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
      */
     function updateServiceTypeId(uint256 newServiceTypeId) external onlyOwner {
         serviceTypeId = newServiceTypeId;
+        emit typeIdUpdated("serviceTypeId", newServiceTypeId);
     }
 
     /**
@@ -451,6 +469,7 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
      */
     function updateMembershipPrice(uint256 newMembershipPrice) external onlyOwner {
         membershipPriceInCardinalTokens = newMembershipPrice;
+        emit membershipPriceUpdated(newMembershipPrice);
     }
 
     /**
@@ -497,7 +516,7 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
     */
     function setMemberDiscount(address memberAddress, uint256 discountAmount) external {
         require(addressIsAdmin[msg.sender], "Only contract admins can set a membership discount.");
-
         addressToMembershipDiscount[memberAddress] = discountAmount;
+        emit memberDiscountSet(memberAddress, discountAmount);
     }
 }

@@ -121,7 +121,6 @@ contract CardinalHousePolling is Ownable {
     function vote(uint proposal) external {
         require(votingOpen, "There isn't a poll going on currently.");
         require(!voted[msg.sender], "You have already voted in this poll.");
-        require(proposal >= 0, "Your proposal number is invalid.");
         require(proposal < proposals.length, "There aren't that many proposals, pick a smaller number.");
 
         uint256 voterCRNLBalance = cardinalToken.balanceOf(msg.sender);

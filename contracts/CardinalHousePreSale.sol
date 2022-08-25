@@ -23,16 +23,21 @@ contract CardinalHousePreSale is Ownable {
     mapping(address => uint256) public addressToAmountPurchased;
 
     // The limit for how many Cardinal Tokens each user can purchase during the presale.
-    uint256 public purchaseCap = 150000 * 10 ** 18;
+    uint256 public purchaseCap = 100000 * 10 ** 18;
 
     // 1 Matic can be used to buy this many Cardinal Tokens.
-    uint256 public MaticToCRNLRate = 52500;
+    uint256 public MaticToCRNLRate = 27133;
 
     // Determines the discount Cardinal House members get in the presale.
     uint256 public memberDiscountAmount = 110;
 
     // Determines if only members can participate in the presale - will be set to true for the first 24 hours of the presale.
     bool public onlyMembers = false;
+
+    event cardinalTokensPurchased(address indexed buyer, uint256 maticAmount, uint256 cardinalTokenAmount);
+    event purchaseCapUpdated(uint256 indexed newPurchaseCap);
+    event maticToCRNLRateUpdated(uint256 indexed newMaticToCRNLRate);
+    event memberDiscountUpdated(uint256 indexed newMemberDiscountAmount);
  
     /**
     * @dev Once the Cardinal Token contract is deployed, this function is used to set a reference to that token in this contract.
@@ -78,21 +83,25 @@ contract CardinalHousePreSale is Ownable {
     * @dev Allows a user to pay Matic for Cardinal Tokens. Conversion rate is 1 Matic to MaticToCRNLRate Cardinal Tokens (CRNL) where MaticToCRNLRate is the variable defined in the contract.
      */
     function purchaseCardinalTokens() external payable {
+        require(msg.value >= 1000, "Not enough Matic sent.");
+
         if (onlyMembers) {
             require(cardinalNFT.addressIsMember(msg.sender), "Only members can participate in the presale for the first 24 hours.");
         }
 
-        // 1 Matic = [MaticToCRNLRate] Cardinal Tokens to transfer to msg sender
-        uint256 CardinalTokenAmount = msg.value * MaticToCRNLRate;
+        // 1 Matic = [MaticToCRNLRate] / 1000 Cardinal Tokens to transfer to msg sender
+        uint256 CardinalTokenAmount = (msg.value * MaticToCRNLRate) / 1000;
 
         if (cardinalNFT.addressIsMember(msg.sender)) {
-            CardinalTokenAmount = CardinalTokenAmount * memberDiscountAmount / 100;
+            CardinalTokenAmount = (CardinalTokenAmount * memberDiscountAmount) / 100;
         }
 
         require(addressToAmountPurchased[msg.sender] + CardinalTokenAmount <= purchaseCap,  "You cannot purchase this many Cardinal Tokens, that would put you past your presale cap.");
  
-        cardinalToken.transfer(msg.sender, CardinalTokenAmount);
         addressToAmountPurchased[msg.sender] += CardinalTokenAmount;
+        cardinalToken.transfer(msg.sender, CardinalTokenAmount);
+
+        emit cardinalTokensPurchased(msg.sender, msg.value, CardinalTokenAmount);
     }
 
     /**
@@ -101,6 +110,7 @@ contract CardinalHousePreSale is Ownable {
      */
     function changeCardinalTokenPurchaseCap(uint256 newPurchaseCap) external onlyOwner {
         purchaseCap = newPurchaseCap;
+        emit purchaseCapUpdated(newPurchaseCap);
     }
 
     /**
@@ -109,6 +119,7 @@ contract CardinalHousePreSale is Ownable {
      */
     function changeMaticToCardinalTokenRate(uint256 newConversionRate) external onlyOwner {
         MaticToCRNLRate = newConversionRate;
+        emit maticToCRNLRateUpdated(newConversionRate);
     }
 
     /**
@@ -117,6 +128,7 @@ contract CardinalHousePreSale is Ownable {
     */
     function changeMemberDiscountAmount(uint256 newMemberDiscountAmount) external onlyOwner {
         memberDiscountAmount = newMemberDiscountAmount;
+        emit memberDiscountUpdated(newMemberDiscountAmount);
     }
 
     /**

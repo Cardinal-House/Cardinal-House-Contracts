@@ -17,11 +17,11 @@ def test_user_can_purchase_tokens():
     initialAccountBalanceMatic = account.balance()
 
     # Act
-    MaticSent = 5
+    MaticSent = 5000
     cardinalHousePreSale.purchaseCardinalTokens({"from": account, "value": MaticSent})
 
     # Assert
-    MaticToCRNLRate = cardinalHousePreSale.MaticToCRNLRate()
+    MaticToCRNLRate = cardinalHousePreSale.MaticToCRNLRate() / 1000
     assert cardinalToken.balanceOf(account.address) == initialAccountBalance + MaticToCRNLRate * MaticSent
     assert cardinalHousePreSale.getContractTokens() == initialPreSaleBalance - MaticToCRNLRate * MaticSent
     assert account.balance() == initialAccountBalanceMatic - MaticSent
@@ -54,12 +54,12 @@ def test_user_cant_purchase_above_purchase_cap():
     cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house()
     cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
 
-    MaticToCRNLRate = cardinalHousePreSale.MaticToCRNLRate()
-    purchaseCap = 10
+    MaticToCRNLRate = cardinalHousePreSale.MaticToCRNLRate() / 1000
+    purchaseCap = 10000
     cardinalHousePreSale.changeCardinalTokenPurchaseCap(purchaseCap, {"from": account})
 
     # Act/Assert
-    MaticSent = 5
+    MaticSent = 5000
     with pytest.raises(exceptions.VirtualMachineError) as ex:
         cardinalHousePreSale.purchaseCardinalTokens({"from": account, "value": MaticSent})
     assert "You cannot purchase this many Cardinal Tokens, that would put you past your presale cap." in str(ex.value)
@@ -73,8 +73,8 @@ def test_user_cant_purchase_above_purchase_cap_2():
     cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house()
     cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
 
-    MaticToCRNLRate = cardinalHousePreSale.MaticToCRNLRate()
-    MaticSent = 5
+    MaticToCRNLRate = cardinalHousePreSale.MaticToCRNLRate() / 1000
+    MaticSent = 5000
     purchaseCap = MaticSent * 2 * MaticToCRNLRate
     cardinalHousePreSale.changeCardinalTokenPurchaseCap(purchaseCap, {"from": account})
 
@@ -114,16 +114,16 @@ def test_owner_can_change_matic_conversion_rate():
     initialAccountBalanceMatic = account.balance()
 
     # Act
-    MaticSent = 2
-    initialConversionRate = cardinalHousePreSale.MaticToCRNLRate()
+    MaticSent = 2000
+    initialConversionRate = cardinalHousePreSale.MaticToCRNLRate() / 1000
     newConversionRate = 75000
     cardinalHousePreSale.purchaseCardinalTokens({"from": account, "value": MaticSent})
     cardinalHousePreSale.changeMaticToCardinalTokenRate(75000, {"from": account})
     cardinalHousePreSale.purchaseCardinalTokens({"from": account, "value": MaticSent})
 
     # Assert
-    MaticToCNRLRate = cardinalHousePreSale.MaticToCRNLRate()
-    assert MaticToCNRLRate == newConversionRate
+    MaticToCNRLRate = cardinalHousePreSale.MaticToCRNLRate() / 1000
+    assert MaticToCNRLRate == newConversionRate / 1000
     assert cardinalToken.balanceOf(account.address) == initialAccountBalance + (initialConversionRate + MaticToCNRLRate) * MaticSent
     assert cardinalHousePreSale.getContractTokens() == initialPreSaleBalance - (initialConversionRate + MaticToCNRLRate) * MaticSent
     assert account.balance() == initialAccountBalanceMatic - MaticSent * 2
@@ -159,18 +159,18 @@ def test_owner_can_withdraw_funds():
     initialAccount2BalanceMatic = account2.balance()
     
     # Act
-    MaticSent = 10
+    MaticSent = 10000
     cardinalHousePreSale.purchaseCardinalTokens({"from": account2, "value": MaticSent})
 
     # Assert
-    MaticToCNRLRate = cardinalHousePreSale.MaticToCRNLRate()
+    MaticToCNRLRate = cardinalHousePreSale.MaticToCRNLRate() / 1000
     assert cardinalToken.balanceOf(account2.address) == initialAccount2Balance + MaticToCNRLRate * MaticSent
     assert cardinalToken.balanceOf(cardinalHousePreSale.address) == initialPreSaleBalance - MaticToCNRLRate * MaticSent
     assert account2.balance() == initialAccount2BalanceMatic - MaticSent
     assert cardinalHousePreSale.balance() == MaticSent
 
     # Act 2
-    maticWithdraw = 8
+    maticWithdraw = 8000
     presaleMaticBalance = cardinalHousePreSale.balance()
     cardinalHousePreSale.withdrawMatic(maticWithdraw, {"from": account})
 
@@ -189,7 +189,7 @@ def test_owner_cant_over_withdraw():
     cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
 
     # Act
-    MaticSent = 5
+    MaticSent = 50000
     maticWithdraw = MaticSent * 2
     cardinalHousePreSale.purchaseCardinalTokens({"from": account2, "value": MaticSent})
 
@@ -207,7 +207,7 @@ def test_only_owner_can_withdraw_funds():
     account2 = retrieve_account(2)
 
     # Act
-    MaticSent = 8
+    MaticSent = 800000
     cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house()
     cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
     cardinalHousePreSale.purchaseCardinalTokens({"from": account, "value": MaticSent})
@@ -259,7 +259,7 @@ def test_member_discount():
     
     # Act
     # Have acount2 and account3 purchase Cardinal Tokens from the presale and make sure the discount applies
-    MaticSent = 1000
+    MaticSent = 10000
     account2InitialCRNLBalance = cardinalToken.balanceOf(account2.address)
     account3InitialCRNLBalance = cardinalToken.balanceOf(account3.address)
     account4InitialCRNLBalance = cardinalToken.balanceOf(account4.address)
@@ -268,7 +268,7 @@ def test_member_discount():
     cardinalHousePreSale.purchaseCardinalTokens({"from": account4, "value": MaticSent})
 
     memberPreSaleDiscount = cardinalHousePreSale.memberDiscountAmount()
-    MaticToCRNLRate = cardinalHousePreSale.MaticToCRNLRate()
+    MaticToCRNLRate = cardinalHousePreSale.MaticToCRNLRate() / 1000
 
     # Assert
     assert cardinalToken.balanceOf(account2.address) == account2InitialCRNLBalance + MaticSent * MaticToCRNLRate * memberPreSaleDiscount / 100
@@ -325,7 +325,7 @@ def test_only_members_can_purchase_when_flag_set():
     
     # Act
     # Have acount2 and account3 purchase Cardinal Tokens from the presale and make sure the discount applies
-    MaticSent = 1000
+    MaticSent = 10000
     account2InitialCRNLBalance = cardinalToken.balanceOf(account2.address)
     account3InitialCRNLBalance = cardinalToken.balanceOf(account3.address)
     account4InitialCRNLBalance = cardinalToken.balanceOf(account4.address)
@@ -338,7 +338,7 @@ def test_only_members_can_purchase_when_flag_set():
     assert "Only members can participate in the presale for the first 24 hours." in str(ex.value)
 
     memberPreSaleDiscount = cardinalHousePreSale.memberDiscountAmount()
-    MaticToCRNLRate = cardinalHousePreSale.MaticToCRNLRate()
+    MaticToCRNLRate = cardinalHousePreSale.MaticToCRNLRate() / 1000
 
     # Assert
     assert cardinalToken.balanceOf(account2.address) == account2InitialCRNLBalance + MaticSent * MaticToCRNLRate * memberPreSaleDiscount / 100

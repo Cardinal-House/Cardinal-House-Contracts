@@ -4,13 +4,13 @@ from web3 import Web3
 
 INITIAL_SUPPLY = Web3.toWei(10000000, "ether")
 
-PROD_MEMBER_GIVEAWAY_ADDRESS = "0x965C421073f0aD56a11b2E3aFB80C451038F6178"
-PROD_MARKETING_ADDRESS = "0x4abAc87EeC0AD0932B71037b5d1fc88B7aC2Defd"
-PROD_DEVELOPER_ADDRESS = "0x9406B17dE6949aB3F32e7c6044b0b29e1987f9ab"
-PROD_LIQUIDITY_ADDRESS = "0xB164Eb7844F3A05Fd3eF01CF05Ac4961a74D47fF"
+PROD_MEMBER_GIVEAWAY_ADDRESS = "0x0cd73249a242eD5D7492882DB17B1295B47C0De4"
+PROD_MARKETING_ADDRESS = "0xA5597787BE507719b83c6Aa2d1367517929e5CDD"
+PROD_DEVELOPER_ADDRESS = "0x8Ac220AdC2952B93a180F364D62A6061fC54d6AC"
+PROD_LIQUIDITY_ADDRESS = "0x5Dc0Dea428D20a5e21FC9AfcdF131A26f3C905D8"
 BURN_ADDRESS = "0x000000000000000000000000000000000000dEaD"
 
-PROD = False
+PROD = True
 
 def deploy_cardinal_house(memberGiveawayWalletAddress=None, marketingWalletAddress=None, developerWalletAddress=None, liquidityWalletAddress=None, burnWalletAddress=None):
     account = retrieve_account()
@@ -49,7 +49,7 @@ def deploy_cardinal_house(memberGiveawayWalletAddress=None, marketingWalletAddre
     publishSource = currNetwork not in DONT_PUBLISH_SOURCE_ENVIRONMENTS
 
     cardinalHousePreSale = CardinalHousePreSale.deploy({"from": account}, publish_source=publishSource)
-    if type(cardinalHousePreSale) == 'TransactionReceipt':
+    if str(type(cardinalHousePreSale)) == 'TransactionReceipt':
         cardinalHousePreSale.wait(1)
         cardinalHousePreSale = cardinalHousePreSale.return_value
     
@@ -67,13 +67,14 @@ def deploy_cardinal_house(memberGiveawayWalletAddress=None, marketingWalletAddre
         publish_source=publishSource
     )
 
-    if type(cardinalToken) == 'TransactionReceipt':
+    if str(type(cardinalToken)) == 'TransactionReceipt':
         cardinalToken.wait(1)
         cardinalToken = cardinalToken.return_value
 
     print(f"Cardinal Token deployed to {cardinalToken.address}")
 
     cardinalHousePolling = CardinalHousePolling.deploy(cardinalToken.address, {"from": account}, publish_source=publishSource)
+
     transaction = cardinalHousePreSale.setToken(cardinalToken.address, {"from": account})
     transaction.wait(1)
     print("Successfully set the Cardinal Token for the presale.")
