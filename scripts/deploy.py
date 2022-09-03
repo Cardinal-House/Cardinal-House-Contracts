@@ -10,7 +10,7 @@ PROD_DEVELOPER_ADDRESS = "0x8Ac220AdC2952B93a180F364D62A6061fC54d6AC"
 PROD_LIQUIDITY_ADDRESS = "0x5Dc0Dea428D20a5e21FC9AfcdF131A26f3C905D8"
 BURN_ADDRESS = "0x000000000000000000000000000000000000dEaD"
 
-PROD = True
+PROD = False
 
 def deploy_cardinal_house(memberGiveawayWalletAddress=None, marketingWalletAddress=None, developerWalletAddress=None, liquidityWalletAddress=None, burnWalletAddress=None):
     account = retrieve_account()
