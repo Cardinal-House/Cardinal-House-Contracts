@@ -16,54 +16,52 @@ PROD = True
 mintToAddresses = [
     # "0x9Ae29376c8fF59bC8B5217D0cbd3a67Ee48B7465",
     # "0xF011f357da24cad5Bb0897C2D652225937aBC4D7",
-    "0xA30305e3300fAeFcF76cf921fEa11D0A73745fbC",
-    "0xD9c45dc237886Cb2C0a3F960305D4f866225842f",
-    "0x1318F75B4be4bfE6321FF6cf0e4A4f8cEaE9e7cE",
-    "0x402dB56D67b91553E5b09Df60d10881fAa8d4cE5",
-    "0x3451382dadAe3F7c1D46070738D0072376803483",
-    "0x43Ca5320BAbF6B2f2328a6dE5C1d97C794d41aBd",
-    "0x377AC2A3adA0952e54F538e51865DfC5FABcAEd7",
-    "0xF99220eBC04de3488E4d3BC1b104e83A75bB137a",
-    "0xb4592B2b0D7cE176213f8f9d13e93DB38aB4773b",
-    "0x44da6d127FB9c5536C4e8f38cC9229576cf50326",
-    "0x563E8425fB2aA879BbE29805745833c13cf4Bd8A",
-    "0x99b005da72c0b668a11f2c5ab6b8f55b00c99b38",
-    "0xc341e0fd548298de89b38fe31f2ac63457105451"
+    # "0xA30305e3300fAeFcF76cf921fEa11D0A73745fbC",
+    # "0xD9c45dc237886Cb2C0a3F960305D4f866225842f",
+    # "0x1318F75B4be4bfE6321FF6cf0e4A4f8cEaE9e7cE",
+    # "0x402dB56D67b91553E5b09Df60d10881fAa8d4cE5",
+    # "0x3451382dadAe3F7c1D46070738D0072376803483",
+    # "0x43Ca5320BAbF6B2f2328a6dE5C1d97C794d41aBd",
+    # "0x377AC2A3adA0952e54F538e51865DfC5FABcAEd7",
+    # "0xF99220eBC04de3488E4d3BC1b104e83A75bB137a",
+    # "0xb4592B2b0D7cE176213f8f9d13e93DB38aB4773b",
+    # "0x44da6d127FB9c5536C4e8f38cC9229576cf50326",
+    # "0x563E8425fB2aA879BbE29805745833c13cf4Bd8A",
+    # "0x99b005da72c0b668a11f2c5ab6b8f55b00c99b38",
+    # "0xc341e0fd548298de89b38fe31f2ac63457105451",
+    # "0x2fd71aa5e1906741b22ed561d04cb1a2a5aca72a",
+    # "0xa5ae0a84d79217aa9e0a61fe1983ae1fe3419d1d",
+    "0x4c90e8efef279a59c380b811003bb6cce96453e7",
 ]
 images = [
     # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 1.png",
     # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 2.png",
-    "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 3.png",
-    "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 4.png",
-    "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 5.png",
-    "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 6.jpg",
-    "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 7.png",
-    "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 8.png",
-    "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 9.png",
-    "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 10.png",
-    "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 11.png",
-    "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 12.png",
-    "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 13.png",
-    "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 14.png",
-    "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 15.png",
+    # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 3.png",
+    # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 4.png",
+    # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 5.png",
+    # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 6.jpg",
+    # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 7.png",
+    # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 8.png",
+    # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 9.png",
+    # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 10.png",
+    # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 11.png",
+    # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 12.png",
+    # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 13.png",
+    # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 14.png",
+    # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 15.png",
+    # "C:\\Users\\colem\\Cardinal House\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 16.png",
+    # "C:\\Users\\colem\\Cardinal House\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 17.png",
+    "C:\\Users\\colem\\Cardinal House\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 18.png",
 ]
 
 tokenIds = [
     # "1",
     # "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "10",
-    "11",
-    "12",
-    "13",
-    "14",
-    "15",
+    # "3",
+    # "4",
+    # "5",
+    # "6",
+    # "7",
     # "8",
     # "9",
     # "10",
@@ -72,14 +70,12 @@ tokenIds = [
     # "13",
     # "14",
     # "15",
-    # "16",
-    # "17",
-    #"18",
+    # "18",
     # "19",
-    # "20"
+    "20",
 ]
 
-startOCNum = 3
+startOCNum = 16
 
 projectId = os.environ["InfuraCardinalHouseProjectId"]
 projectSecret = os.environ["InfuraCardinalHouseProjectSecret"]
@@ -112,10 +108,10 @@ def mint_original_cardinal_NFTs(cardinalNFTAddress=None, mintToAddresses=mintToA
 
         with open(currImage, "rb") as imageFile:
             files = {'file': imageFile}
-            response = requests.post('https://ipfs.infura.io:5001/api/v0/add', files=files, auth=(projectId, projectSecret))
+            response = requests.post('https://infura-ipfs.io:5001/api/v0/add', files=files, auth=(projectId, projectSecret))
             imageHash = response.json()["Hash"]
             
-            currImageURL = f"https://ipfs.infura.io/ipfs/{imageHash}"
+            currImageURL = f"https://infura-ipfs.io/ipfs/{imageHash}"
 
         currTokenURI = {
             "NFTName": f"Original Cardinal NFT #{currOCNum}",
@@ -124,9 +120,9 @@ def mint_original_cardinal_NFTs(cardinalNFTAddress=None, mintToAddresses=mintToA
         }
 
         files = {'file': str(currTokenURI).replace("\'", "\"")}
-        response = requests.post('https://ipfs.infura.io:5001/api/v0/add', files=files, auth=(projectId, projectSecret))
+        response = requests.post('https://infura-ipfs.io:5001/api/v0/add', files=files, auth=(projectId, projectSecret))
         tokenURIHash = response.json()["Hash"]
-        newTokenURI = f"https://ipfs.infura.io/ipfs/{tokenURIHash}"
+        newTokenURI = f"https://infura-ipfs.io/ipfs/{tokenURIHash}"
 
         epoch_time = chain.time()
         cardinalNFTContract.createToken(newTokenURI, cardinalNFTContract.originalCardinalTypeId(), 0, epoch_time, {"from": account})
