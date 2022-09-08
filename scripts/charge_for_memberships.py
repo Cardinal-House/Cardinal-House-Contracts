@@ -1,10 +1,12 @@
 from brownie import network, config, chain, CardinalToken, CardinalNFT
 from brownie.network.contract import Contract
 from scripts.common_funcs import retrieve_account
+from datetime import datetime
 from pathlib import Path
 from web3 import Web3
 import math
 import csv
+import os
 
 CARDINAL_TOKEN_ADDRESS_TEST = "0x03c83C3Ff23eCE0b81bF8DD64A403F7230522874"
 CARDINAL_TOKEN_ADDRESS = "0x6B627cF7D9D2fF72fCa23bb43dA8350f42577CEa"
@@ -33,6 +35,14 @@ def charge_for_memberships(cardinalTokenAddress=None, cardinalNFTAddress=None, c
     
     if not cardinalHouseMarketplaceAddress:
         cardinalHouseMarketplaceAddress = CARDINAL_HOUSE_MARKETPLACE_ADDRESS_TEST
+
+    if not os.path.exists("logs"):
+        os.mkdir("logs")
+
+    currDate = datetime.now()
+    currDateStr = datetime.strftime(currDate, "%Y-%m-%d")
+    if not os.path.exists(f"logs/{currDateStr}"):
+        os.mkdir(f"logs/{currDateStr}")
 
     cardinalTokenABI = CardinalToken.abi
     cardinalToken = Contract.from_abi("CardinalToken", cardinalTokenAddress, cardinalTokenABI)
@@ -74,6 +84,15 @@ def charge_for_memberships(cardinalTokenAddress=None, cardinalNFTAddress=None, c
     # Any final checks?
 
     print(f"Account Matic balance is now currently: {account.balance()}")
+
+    with open(f"logs/{currDateStr}/membershipCharges.txt", 'a') as membershipChargesFile:
+        membershipChargesFile.writelines([
+            f"{currDate.strftime('%Y-%m-%d, %H:%M:%S')}:\n",
+            f"Charged Members: {chargedMembers}\n",
+            f"Charged NFT IDs: {chargedNFTIds}\n",
+            f"Lost members: {lostMembers}\n",
+            f"Burnt NFT IDs: {burntNFTs}\n\n\n"
+        ])
 
     return chargedMembers, chargedNFTIds, lostMembers, burntNFTs
 
