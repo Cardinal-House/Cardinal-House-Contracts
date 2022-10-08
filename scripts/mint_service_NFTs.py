@@ -66,12 +66,9 @@ def mint_service_NFTs(cardinalNFTAddress=None, mintToAddresses=mintToAddresses, 
         currTokenDescription = tokenDescriptions[i]
         currImageURL = ""
 
-        with open(currImage, "rb") as imageFile:
-            files = {'file': imageFile}
-            response = requests.post('https://infura-ipfs.io:5001/api/v0/add', files=files, auth=(projectId, projectSecret))
-            imageHash = response.json()["Hash"]
-            
-            currImageURL = f"https://infura-ipfs.io/ipfs/{imageHash}"
+        response = pinata.pin_file_to_ipfs(currImage)
+
+        currImageURL = f"https://gateway.pinata.cloud/ipfs/{response['IpfsHash']}"
 
         currTokenURI = {
             "NFTName": currTokenName,
@@ -79,10 +76,9 @@ def mint_service_NFTs(cardinalNFTAddress=None, mintToAddresses=mintToAddresses, 
             "image": currImageURL
         }
 
-        files = {'file': str(currTokenURI).replace("\'", "\"")}
-        response = requests.post('https://infura-ipfs.io:5001/api/v0/add', files=files, auth=(projectId, projectSecret))
-        tokenURIHash = response.json()["Hash"]
-        newTokenURI = f"https://infura-ipfs.io/ipfs/{tokenURIHash}"
+        response = pinata.pin_json_to_ipfs(currTokenURI)
+
+        newTokenURI = f"https://gateway.pinata.cloud/ipfs/{response['IpfsHash']}"
 
         epoch_time = chain.time()
         cardinalNFTContract.createToken(newTokenURI, cardinalNFTContract.serviceTypeId(), 0, epoch_time, {"from": account})

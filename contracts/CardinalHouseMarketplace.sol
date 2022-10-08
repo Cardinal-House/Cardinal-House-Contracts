@@ -3,10 +3,14 @@ pragma solidity 0.8.8;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import './CardinalNFT.sol';
-import './CardinalToken.sol';
+
+interface CardinalNFTFunctions {
+    function tokenIdToListingFee(uint256) external returns (uint256);
+    function tokenIdToWhitelistAddress(uint256) external returns (address);
+}
 
 /**
  * @title Cardinal House NFT Marketplace Contract
@@ -40,20 +44,15 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
   // Maps each NFT's marketplace item ID to all of the properties for the NFT on the marketplace.
   mapping(uint256 => MarketItem) public idToMarketItem;
 
-  // If the NFT contract address ever changes, this mapping keeps track of past NFT contract addresses
-  // so that users can still sell NFTs minted with the old contract on the marketplace. If a user tries
-  // to sell an NFT from a contract that isn't true in this mapping, it will be rejected.
-  mapping (address => bool) public addressToPreviousNFTAddress;
+  // Mapping to determine which NFT addresses can have NFTs listed with this marketplace.
+  mapping (address => bool) public NFTContractWhitelisted;
+
+  // Mapping to determine the token address for each NFT contract.
+  mapping (address => address) public NFTContractToTokenAddress;
 
   // Blacklist mapping for listing and purchasing Cardinal NFTs.
   // If this mapping is true for an address then they can't use the marketplace.
   mapping (address => bool) public blacklist;
-
-  // References the deployed Cardinal Token.
-  CardinalToken public cardinalToken;
-
-  // References the deployed Cardinal NFT contract.
-  CardinalNFT public cardinalNFT;
 
   // Event emitted whenever a Cardinal NFT is put up for sale on the Cardinal House marketplace.
   event MarketItemCreated (
@@ -96,10 +95,6 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
 
   event defaultListingpriceUpdated(uint256 indexed newDefaultListingPrice);
 
-  constructor(address payable CardinalTokenAddress) {
-    cardinalToken = CardinalToken(CardinalTokenAddress);
-  }
-
   /**
   * @dev Gets the listing price for listing an NFT on the marketplace
   * @return the current listing price
@@ -118,38 +113,39 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
   }
 
   /**
-  * @dev Only owner function to set the reference to the Cardinal Token (CRNL)
-  * @param CardinalTokenAddress the contract address for the Cardinal Token
+  * @dev Only owner function to whitelist an NFT contract
+  * @param newNFTContractAddress the address for the NFT contract to whitelist
+  * @param newNFTContractTokenAddress the token address for the NFT contract
   */
-  function setCardinalToken(address payable CardinalTokenAddress) external onlyOwner {
-      cardinalToken = CardinalToken(CardinalTokenAddress);
+  function whiteListNFTContract(address payable newNFTContractAddress, address newNFTContractTokenAddress) external onlyOwner {
+      NFTContractWhitelisted[newNFTContractAddress] = true;
+      NFTContractToTokenAddress[newNFTContractAddress] = newNFTContractTokenAddress;
   }
 
   /**
-  * @dev Only owner function to set the reference to the Cardinal NFT contract
-  * @param CardinalNFTAddress the address for the Cardinal NFT contract
+  * @dev Only owner function to unwhitelist an NFT contract
+  * @param newNFTContractAddress the address for the NFT contract to unwhitelist
   */
-  function setCardinalNFT(address payable CardinalNFTAddress) external onlyOwner {
-      cardinalNFT = CardinalNFT(CardinalNFTAddress);
-      addressToPreviousNFTAddress[CardinalNFTAddress] = true;
+  function unWhiteListNFTContract(address payable newNFTContractAddress) external onlyOwner {
+      NFTContractWhitelisted[newNFTContractAddress] = false;
   }
   
   /**
-  * @dev Function to list a Cardinal NFT on the marketplace
-  * @param nftContract contract that the NFT was minted on. Only accepts Cardinal NFT contract addresses
+  * @dev Function to list an NFT on the marketplace
+  * @param nftContract contract that the NFT was minted on. Only accepts whitelisted NFT contract addresses
   * @param tokenId the token ID of the NFT on the NFT contract
-  * @param price the price of the token in Cardinal Tokens (CRNL)
+  * @param price the price of the NFT in tokens (CRNL, USDC, etc.)
   */
   function createMarketItem(
     address nftContract,
     uint256 tokenId,
     uint256 price
   ) external payable nonReentrant {
-    require(addressToPreviousNFTAddress[nftContract], "This isn't a valid Cardinal NFT contract.");
+    require(NFTContractWhitelisted[nftContract], "This isn't a whitelisted NFT contract.");
     require(!blacklist[msg.sender], "You have been blacklisted from the Cardinal House NFT marketplace. If you think this is an error, please contact the Cardinal House team.");
     require(price > 0, "The NFT price must be at least 1 wei.");
 
-    uint256 nftListingPrice = cardinalNFT.tokenIdToListingFee(tokenId);
+    uint256 nftListingPrice = CardinalNFTFunctions(nftContract).tokenIdToListingFee(tokenId);
     if (nftListingPrice == 0) {
       nftListingPrice = defaultListingPrice;
     }
@@ -193,28 +189,28 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
 
   /**
   * @dev Creates the sale of a marketplace item. Transfers ownership of the NFT and sends funds to the seller
-  * @param nftContract contract that the NFT was minted on. Only accepts Cardinal NFT contract addresses
+  * @param nftContract contract that the NFT was minted on. Only accepts whitelisted NFT contract addresses
   * @param itemId the item ID of the NFT on the marketplace
-  * @param amountIn the amount of Cardinal Token the user is supplying to purchase the NFT
+  * @param amountIn the amount of tokens the user is supplying to purchase the NFT
   */
   function createMarketSale(
     address nftContract,
     uint256 itemId,
     uint256 amountIn
     ) external nonReentrant {
-    require(addressToPreviousNFTAddress[nftContract], "This isn't a valid Cardinal NFT contract.");
+    require(NFTContractWhitelisted[nftContract], "This isn't a whitelisted NFT contract.");
     require(!blacklist[msg.sender], "You have been blacklisted from the Cardinal House NFT marketplace. If you think this is an error, please contact the Cardinal House team.");
     require(!idToMarketItem[itemId].sold, "This marketplace item has already been sold.");
 
     uint tokenId = idToMarketItem[itemId].tokenId;
-    if (cardinalNFT.tokenIdToWhitelistAddress(tokenId) != address(0) && idToMarketItem[itemId].seller == owner()) {
-      require(msg.sender == cardinalNFT.tokenIdToWhitelistAddress(tokenId), "This NFT has been assigned to someone through a Whitelist spot. Only they can purchase this NFT.");
+    if (CardinalNFTFunctions(nftContract).tokenIdToWhitelistAddress(tokenId) != address(0) && idToMarketItem[itemId].seller == owner()) {
+      require(msg.sender == CardinalNFTFunctions(nftContract).tokenIdToWhitelistAddress(tokenId), "This NFT has been assigned to someone through a Whitelist spot. Only they can purchase this NFT.");
     }
 
     uint price = idToMarketItem[itemId].price;
     require(amountIn == price, "Please submit the asking price in order to complete the purchase.");
 
-    cardinalToken.transferFrom(msg.sender, idToMarketItem[itemId].seller, amountIn);
+    IERC20(NFTContractToTokenAddress[nftContract]).transferFrom(msg.sender, idToMarketItem[itemId].seller, amountIn);
 
     idToMarketItem[itemId].owner = payable(msg.sender);
     idToMarketItem[itemId].sold = true;
@@ -240,14 +236,14 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
 
   /**
   * @dev Cancels an NFT listing on the marketplace and returns the listing fee to the seller
-  * @param nftContract contract that the NFT was minted on. Only accepts Cardinal NFT contract addresses
+  * @param nftContract contract that the NFT was minted on. Only accepts whitelisted NFT contract addresses
   * @param itemId the item ID of the NFT on the marketplace
   */
   function cancelMarketSale(
     address nftContract,
     uint256 itemId
     ) external nonReentrant {
-    require(addressToPreviousNFTAddress[nftContract], "This isn't a valid Cardinal NFT contract.");
+    require(NFTContractWhitelisted[nftContract], "This isn't a whitelisted NFT contract.");
     require(!blacklist[msg.sender], "You have been blacklisted from the Cardinal House NFT marketplace. If you think this is an error, please contact the Cardinal House team.");
     uint tokenId = idToMarketItem[itemId].tokenId;
     address itemSeller = idToMarketItem[itemId].seller;
@@ -390,5 +386,4 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
   function updateBlackList(address user, bool blacklisted) external onlyOwner {
     blacklist[user] = blacklisted;
   }
-
 }

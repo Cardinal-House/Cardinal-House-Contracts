@@ -22,13 +22,13 @@ def deploy_cardinal_house_marketplace(cardinalTokenAddress=None, cardinalPreSale
 
     publishSource = currNetwork not in DONT_PUBLISH_SOURCE_ENVIRONMENTS
 
-    cardinalHouseMarketplace = CardinalHouseMarketplace.deploy(cardinalTokenAddress, {"from": account}, publish_source=publishSource)
+    cardinalHouseMarketplace = CardinalHouseMarketplace.deploy({"from": account}, publish_source=publishSource)
     print(f"Cardinal House Marketplace deployed to {cardinalHouseMarketplace.address}")
 
     cardinalNFT = CardinalNFT.deploy(cardinalHouseMarketplace.address, cardinalTokenAddress, {"from": account}, publish_source=publishSource)
     print(f"Cardinal NFT deployed to {cardinalNFT.address}")
 
-    transaction = cardinalHouseMarketplace.setCardinalNFT(cardinalNFT.address, {"from": account})
+    transaction = cardinalHouseMarketplace.whiteListNFTContract(cardinalNFT.address, cardinalTokenAddress, {"from": account})
     transaction.wait(1)
 
     print("Successfully set the Cardinal NFT reference for the marketplace.")

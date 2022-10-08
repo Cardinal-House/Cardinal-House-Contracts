@@ -582,7 +582,7 @@ def test_cardinal_house_marketplace():
     NFTPrice = 1000000
     with pytest.raises(exceptions.VirtualMachineError) as ex:
         cardinalHouseMarketplace.createMarketItem(ZERO_ADDRESS, tokenId, NFTPrice, {"from": account})
-    assert "revert: This isn't a valid Cardinal NFT contract" in str(ex.value)
+    assert "revert: This isn't a whitelisted NFT contract" in str(ex.value)
 
     # Owner can add the NFT to the marketplace without a fee
     cardinalHouseMarketplace.createMarketItem(cardinalNFT.address, tokenId, NFTPrice, {"from": account})
@@ -609,7 +609,7 @@ def test_cardinal_house_marketplace():
     # User can't purchase an NFT from an invalid NFT address
     with pytest.raises(exceptions.VirtualMachineError) as ex:
         cardinalHouseMarketplace.createMarketSale(ZERO_ADDRESS, tokenId, NFTPrice, {"from": account5})
-    assert "revert: This isn't a valid Cardinal NFT contract" in str(ex.value)
+    assert "revert: This isn't a whitelisted NFT contract" in str(ex.value)
 
     # User can't purchase an NFT without first approving the marketplace to spend their Cardinal Tokens
     with pytest.raises(exceptions.VirtualMachineError) as ex:
