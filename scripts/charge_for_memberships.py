@@ -14,7 +14,7 @@ CARDINAL_NFT_ADDRESS_TEST = "0x2B579760ff3B8B899454370e765Bb748B146aCF0"
 CARDINAL_NFT_ADDRESS = "0x94E2c821Fe8c7953595544e3DA4500cCC157FCa4"
 CARDINAL_HOUSE_MARKETPLACE_ADDRESS_TEST = "0xFa246fCF66056BFa737027ef24c8410248eD9041"
 CARDINAL_HOUSE_MARKETPLACE_ADDRESS = "0x87dD7CC57E95cb288274319EbD33ED0fA640CBEf"
-PROD = False
+PROD = True
 
 MEMBERSHIP_SECONDS_TILL_RECHARGE = 2592000
 
@@ -71,7 +71,7 @@ def charge_for_memberships(cardinalTokenAddress=None, cardinalNFTAddress=None, c
             if epoch_time - membershipLastPaidTimestamp >= membershipSecondsTillRecharge:
                 chargeResult = cardinalNFT.chargeMemberForMembership(NFTOwner, membershipNFTId, epoch_time, {"from": account})
 
-                if chargeResult.return_value == 0:
+                if chargeResult == 0:
                     chargedMembers.append(NFTOwner)
                 elif not cardinalNFT.addressIsMember(NFTOwner):
                     lostMembers.append(NFTOwner)

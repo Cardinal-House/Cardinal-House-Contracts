@@ -67,28 +67,37 @@ contract NodeRunner is ERC721URIStorage, Ownable {
 
     /**
     * @dev Allows someone to mint a Node Runner NFT by paying USDC
+    * @param nftCount the number of NFTs to mint
     * @return newItemId the ID of the newly minted Node Runner NFT
      */
-    function mintNodeRunnerNFT() external returns (uint) {
+    function mintNodeRunnerNFT(uint256 nftCount) external returns (uint[] memory) {
+        require(nftCount > 0, "You have to mint at least one Node Runner NFt.");
+        require(nftCount + _tokenIds.current() <= maxNFTs, "There aren't enough Node Runner NFTs for this node for you to mint you amount you chose. Another node will be available soon!");
         require(cardinalNFT.addressIsMember(msg.sender), "Only Cardinal Crew Members can participate in Node Runner.");
-        require(_tokenIds.current() < maxNFTs, "The maximum number of Node Runner NFTs for this node have already been minted! Another node will be available soon!");
         require(USDC.balanceOf(msg.sender) >= NFTPriceInUSDC, "You don't have enough USDC to pay for the Node Runner NFT.");
         require(USDC.allowance(msg.sender, address(this)) >= NFTPriceInUSDC, "You haven't approved this contract to spend enough of your USDC to pay for the Node Runner NFT.");
         
-        USDC.transferFrom(msg.sender, address(this), NFTPriceInUSDC);
+        uint256[] memory mintedNFTIds = new uint256[](nftCount);
+        uint256 i = 0;
 
-        _tokenIds.increment();
-        uint256 newItemId = _tokenIds.current();
+        for (i = 0; i < nftCount; i += 1) {
+            USDC.transferFrom(msg.sender, address(this), NFTPriceInUSDC);
 
-        tokenIdToListingFee[newItemId] = defaultListingFee;
-        _mint(msg.sender, newItemId);
-        _setTokenURI(newItemId, nodeRunnerTokenURI);
-        approve(address(this), newItemId);
-        setApprovalForAll(marketplaceAddress, true);
+            _tokenIds.increment();
+            uint256 newItemId = _tokenIds.current();
 
-        emit nodeRunnerNFTMinted(msg.sender, newItemId);
+            tokenIdToListingFee[newItemId] = defaultListingFee;
+            _mint(msg.sender, newItemId);
+            _setTokenURI(newItemId, nodeRunnerTokenURI);
+            approve(address(this), newItemId);
+            setApprovalForAll(marketplaceAddress, true);
 
-        return newItemId;
+            mintedNFTIds[i] = newItemId;
+
+            emit nodeRunnerNFTMinted(msg.sender, newItemId);
+        }
+
+        return mintedNFTIds;
     }
 
     /**

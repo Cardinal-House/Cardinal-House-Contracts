@@ -35,7 +35,7 @@ def test_user_can_purchase_node_runner_NFT():
     cardinalNFT.addMember(account2.address, {"from": account})
 
     cardinalToken.approve(nodeRunner.address, NFTPrice, {"from": account2})
-    nodeRunner.mintNodeRunnerNFT({"from": account2})
+    nodeRunner.mintNodeRunnerNFT(1, {"from": account2})
 
     # Assert
     assert nodeRunner.nodeRunnerTokenURI() == testTokenURI
@@ -72,7 +72,7 @@ def test_user_cant_purchase_NFT_unless_member():
     cardinalToken.approve(nodeRunner.address, NFTPrice, {"from": account2})
 
     with pytest.raises(exceptions.VirtualMachineError) as ex:
-        nodeRunner.mintNodeRunnerNFT({"from": account2})
+        nodeRunner.mintNodeRunnerNFT(1, {"from": account2})
     assert "Only Cardinal Crew Members can participate in Node Runner." in str(ex.value)
 
 def test_user_cant_purchase_NFT_without_funds():
@@ -100,7 +100,7 @@ def test_user_cant_purchase_NFT_without_funds():
     cardinalToken.approve(nodeRunner.address, NFTPrice, {"from": account2})
 
     with pytest.raises(exceptions.VirtualMachineError) as ex:
-        nodeRunner.mintNodeRunnerNFT({"from": account2})
+        nodeRunner.mintNodeRunnerNFT(1, {"from": account2})
     assert "You don't have enough USDC to pay for the Node Runner NFT." in str(ex.value)
 
 def test_user_cant_purchase_NFT_without_approving_funds():
@@ -128,7 +128,7 @@ def test_user_cant_purchase_NFT_without_approving_funds():
     cardinalToken.approve(nodeRunner.address, NFTPrice - 1, {"from": account2})
 
     with pytest.raises(exceptions.VirtualMachineError) as ex:
-        nodeRunner.mintNodeRunnerNFT({"from": account2})
+        nodeRunner.mintNodeRunnerNFT(1, {"from": account2})
     assert "You haven't approved this contract to spend enough of your USDC to pay for the Node Runner NFT." in str(ex.value)
 
 def test_user_cant_purchase_NFT_past_limit():
@@ -157,13 +157,13 @@ def test_user_cant_purchase_NFT_past_limit():
 
     cardinalToken.approve(nodeRunner.address, NFTPrice * maxNFTs, {"from": account})
     for i in range(maxNFTs):
-        nodeRunner.mintNodeRunnerNFT({"from": account})
+        nodeRunner.mintNodeRunnerNFT(1, {"from": account})
 
     cardinalToken.approve(nodeRunner.address, NFTPrice, {"from": account2})
 
     with pytest.raises(exceptions.VirtualMachineError) as ex:
-        nodeRunner.mintNodeRunnerNFT({"from": account2})
-    assert "The maximum number of Node Runner NFTs for this node have already been minted! Another node will be available soon!" in str(ex.value)
+        nodeRunner.mintNodeRunnerNFT(1, {"from": account2})
+    assert "There aren't enough Node Runner NFTs for this node for you to mint you amount you chose. Another node will be available soon!" in str(ex.value)
 
 def test_owner_can_deposit_matic():
     # Arrange
@@ -195,11 +195,8 @@ def test_owner_can_deposit_matic():
     cardinalToken.approve(nodeRunner.address, NFTPrice * account1NFTCount, {"from": account})
     cardinalToken.approve(nodeRunner.address, NFTPrice * account2NFTCount, {"from": account2})
 
-    for i in range(account1NFTCount):
-        nodeRunner.mintNodeRunnerNFT({"from": account})
-    
-    for i in range(account2NFTCount):
-        nodeRunner.mintNodeRunnerNFT({"from": account2})
+    nodeRunner.mintNodeRunnerNFT(account1NFTCount, {"from": account})
+    nodeRunner.mintNodeRunnerNFT(account2NFTCount, {"from": account2})
 
     nodeRunner.depositNodeRewards({"from": account, "value": depositAmount})
 
@@ -238,11 +235,8 @@ def test_users_can_withdraw_matic():
     cardinalToken.approve(nodeRunner.address, NFTPrice * account1NFTCount, {"from": account})
     cardinalToken.approve(nodeRunner.address, NFTPrice * account2NFTCount, {"from": account2})
 
-    for i in range(account1NFTCount):
-        nodeRunner.mintNodeRunnerNFT({"from": account})
-    
-    for i in range(account2NFTCount):
-        nodeRunner.mintNodeRunnerNFT({"from": account2})
+    nodeRunner.mintNodeRunnerNFT(account1NFTCount, {"from": account})
+    nodeRunner.mintNodeRunnerNFT(account2NFTCount, {"from": account2})
 
     nodeRunner.depositNodeRewards({"from": account, "value": depositAmount})
 
@@ -332,7 +326,7 @@ def test_owner_can_withdraw_node_funds():
     cardinalNFT.addMember(account2.address, {"from": account})
 
     cardinalToken.approve(nodeRunner.address, NFTPrice * 2, {"from": account2})
-    nodeRunner.mintNodeRunnerNFT({"from": account2})
+    nodeRunner.mintNodeRunnerNFT(1, {"from": account2})
 
     initialCardinalTokenBalance = cardinalToken.balanceOf(account.address)
     nodeRunner.withdrawNodeFunds({"from": account})

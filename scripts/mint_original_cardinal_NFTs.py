@@ -1,6 +1,7 @@
 from brownie import network, config, chain, CardinalNFT
 from brownie.network.contract import Contract
 from scripts.common_funcs import retrieve_account
+from pinatapy import PinataPy
 from pathlib import Path
 from web3 import Web3
 import requests
@@ -11,7 +12,7 @@ import os
 
 CARDINAL_NFT_ADDRESS_TEST = "0x92259eB95029965d82edf81A996Add27c6b6a54a"
 CARDINAL_NFT_ADDRESS = "0x94E2c821Fe8c7953595544e3DA4500cCC157FCa4"
-PROD = False
+PROD = True
 
 mintToAddresses = [
     # "0x9Ae29376c8fF59bC8B5217D0cbd3a67Ee48B7465",
@@ -31,7 +32,10 @@ mintToAddresses = [
     # "0xc341e0fd548298de89b38fe31f2ac63457105451",
     # "0x2fd71aa5e1906741b22ed561d04cb1a2a5aca72a",
     # "0xa5ae0a84d79217aa9e0a61fe1983ae1fe3419d1d",
-    "0x4c90e8efef279a59c380b811003bb6cce96453e7",
+    # "0x4c90e8efef279a59c380b811003bb6cce96453e7",
+    "0x6E4D81B632Ee459Af61fb82e73D4e87Ff6dE70Cb",
+    "0x75D0E59e954AC655e20eC8419fDa6415a7F7d0b2",
+    "0x1270781F79133e7d1EB6928aca40cD949af27dA8",
 ]
 images = [
     # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 1.png",
@@ -51,7 +55,10 @@ images = [
     # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 15.png",
     # "C:\\Users\\colem\\Cardinal House\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 16.png",
     # "C:\\Users\\colem\\Cardinal House\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 17.png",
-    "C:\\Users\\colem\\Cardinal House\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 18.png",
+    # "C:\\Users\\colem\\Cardinal House\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 18.png",
+    "Original Cardinal NFT 19.png",
+    "Original Cardinal NFT 20.png",
+    "Original Cardinal NFT 21.png",
 ]
 
 tokenIds = [
@@ -72,13 +79,15 @@ tokenIds = [
     # "15",
     # "18",
     # "19",
-    "20",
+    # "20",
+    "30",
+    "31",
+    "32",
 ]
 
-startOCNum = 16
+startOCNum = 19
 
-projectId = os.environ["InfuraCardinalHouseProjectId"]
-projectSecret = os.environ["InfuraCardinalHouseProjectSecret"]
+pinata = PinataPy(os.environ["PinataApiKey"], os.environ["PinataSecretApiKey"])
 
 def mint_original_cardinal_NFTs(cardinalNFTAddress=None, mintToAddresses=mintToAddresses, images=images, startOCNum=startOCNum):
     account = retrieve_account()
