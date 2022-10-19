@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 interface CardinalNFTFunctions {
+    function addressIsMember(address) external returns (bool);
     function tokenIdToListingFee(uint256) external returns (uint256);
     function tokenIdToWhitelistAddress(uint256) external returns (address);
 }
@@ -26,7 +27,7 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
   Counters.Counter public _itemsSold;
 
   // The default listing fee for any users that want to resell their Cardinal NFTs.
-  uint256 defaultListingPrice = 0 ether;
+  uint256 public defaultListingPrice = 0 ether;
 
   // Properties of a Cardinal NFT on the marketplace.
   struct MarketItem {
@@ -49,6 +50,9 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
 
   // Mapping to determine the token address for each NFT contract.
   mapping (address => address) public NFTContractToTokenAddress;
+
+  // Mapping to determine if an NFT contract requires Cardinal Crew.
+  mapping (address => bool) public NFTContractToRequireCardinalCrew;
 
   // Blacklist mapping for listing and purchasing Cardinal NFTs.
   // If this mapping is true for an address then they can't use the marketplace.
@@ -117,9 +121,10 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
   * @param newNFTContractAddress the address for the NFT contract to whitelist
   * @param newNFTContractTokenAddress the token address for the NFT contract
   */
-  function whiteListNFTContract(address payable newNFTContractAddress, address newNFTContractTokenAddress) external onlyOwner {
+  function whiteListNFTContract(address payable newNFTContractAddress, address newNFTContractTokenAddress, bool requireCardinalCrew) external onlyOwner {
       NFTContractWhitelisted[newNFTContractAddress] = true;
       NFTContractToTokenAddress[newNFTContractAddress] = newNFTContractTokenAddress;
+      NFTContractToRequireCardinalCrew[newNFTContractAddress] = requireCardinalCrew;
   }
 
   /**
@@ -144,6 +149,10 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
     require(NFTContractWhitelisted[nftContract], "This isn't a whitelisted NFT contract.");
     require(!blacklist[msg.sender], "You have been blacklisted from the Cardinal House NFT marketplace. If you think this is an error, please contact the Cardinal House team.");
     require(price > 0, "The NFT price must be at least 1 wei.");
+
+    if (NFTContractToRequireCardinalCrew[nftContract]) {
+      require(CardinalNFTFunctions(nftContract).addressIsMember(msg.sender), "Only Cardinal Crew Members can participate in Node Runner!");
+    }
 
     uint256 nftListingPrice = CardinalNFTFunctions(nftContract).tokenIdToListingFee(tokenId);
     if (nftListingPrice == 0) {
@@ -201,6 +210,10 @@ contract CardinalHouseMarketplace is ReentrancyGuard, Ownable {
     require(NFTContractWhitelisted[nftContract], "This isn't a whitelisted NFT contract.");
     require(!blacklist[msg.sender], "You have been blacklisted from the Cardinal House NFT marketplace. If you think this is an error, please contact the Cardinal House team.");
     require(!idToMarketItem[itemId].sold, "This marketplace item has already been sold.");
+
+    if (NFTContractToRequireCardinalCrew[nftContract]) {
+      require(CardinalNFTFunctions(nftContract).addressIsMember(msg.sender), "Only Cardinal Crew Members can participate in Node Runner!");
+    }
 
     uint tokenId = idToMarketItem[itemId].tokenId;
     if (CardinalNFTFunctions(nftContract).tokenIdToWhitelistAddress(tokenId) != address(0) && idToMarketItem[itemId].seller == owner()) {

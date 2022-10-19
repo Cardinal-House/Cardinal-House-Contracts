@@ -139,6 +139,7 @@ contract NodeRunner is ERC721URIStorage, Ownable {
     @dev Function for NFT holders to claim their node rewards.
     */
     function claimNodeRewards() external {
+        require(cardinalNFT.addressIsMember(msg.sender), "Only Cardinal Crew Members can participate in Node Runner.");
         require(addressToMaticCanClaim[msg.sender] > 0, "You don't have any node rewards to claim! If you have an NFT for this node, please wait until the next reward deposit.");
         
         uint256 claimAmount = addressToMaticCanClaim[msg.sender];
@@ -261,5 +262,13 @@ contract NodeRunner is ERC721URIStorage, Ownable {
      */
     function updateNFTPriceInUSDC(uint256 newNFTPriceInUSDC) external onlyOwner {
         NFTPriceInUSDC = newNFTPriceInUSDC;
+    }
+
+    /**
+    * @dev function for the marketplace to determine if an address is a Cardinal Crew member.
+    * @param user the address to check the Cardinal Crew membership of
+    */
+    function addressIsMember(address user) external returns (bool) {
+        return cardinalNFT.addressIsMember(user);
     }
 }

@@ -28,7 +28,7 @@ def deploy_cardinal_house_marketplace(cardinalTokenAddress=None, cardinalPreSale
     cardinalNFT = CardinalNFT.deploy(cardinalHouseMarketplace.address, cardinalTokenAddress, {"from": account}, publish_source=publishSource)
     print(f"Cardinal NFT deployed to {cardinalNFT.address}")
 
-    transaction = cardinalHouseMarketplace.whiteListNFTContract(cardinalNFT.address, cardinalTokenAddress, {"from": account})
+    transaction = cardinalHouseMarketplace.whiteListNFTContract(cardinalNFT.address, cardinalTokenAddress, False, {"from": account})
     transaction.wait(1)
 
     print("Successfully set the Cardinal NFT reference for the marketplace.")

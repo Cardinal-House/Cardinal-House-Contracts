@@ -7,6 +7,7 @@ from web3 import Web3
 import pytest
 
 LIQUIDITY_SUPPLY = Web3.toWei(3500000, "ether")
+ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 def test_user_can_purchase_node_runner_NFT():
     # Arrange
@@ -333,3 +334,162 @@ def test_owner_can_withdraw_node_funds():
 
     # Assert
     assert cardinalToken.balanceOf(account.address) == initialCardinalTokenBalance + NFTPrice * 2
+
+
+def test_user_cant_list_NFT_unless_whitelisted():
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("This test is only for local blockchains.")
+
+    account = retrieve_account()
+    account2 = retrieve_account(2)
+    cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house()
+    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
+    uniswapPair = cardinalToken.uniswapPair()
+    cardinalToken.transfer(uniswapPair, LIQUIDITY_SUPPLY, {"from": account})
+    cardinalToken.setContractTokenDivisor(1, {"from": account})
+
+    listingFee = 1000
+    maxNFTs = 20
+    NFTPrice = 10000
+    nodeRunner = deploy_node_runner(cardinalHouseMarketplace.address, cardinalNFT.address, cardinalToken.address, listingFee, maxNFTs, NFTPrice)
+    cardinalToken.excludeUserFromFees(nodeRunner.address, {"from": account})
+    nodeRunner.updateNFTPriceInUSDC(NFTPrice * 2, {"from": account})
+    nodeRunner.updateUSDCAddress(cardinalToken.address, {"from": account})
+
+    # Act / Assert
+    cardinalToken.transfer(account2.address, NFTPrice * 2, {"from": account})
+    cardinalNFT.setAdminUser(account.address, True, {"from": account})
+    cardinalNFT.addMember(account2.address, {"from": account})
+
+    cardinalToken.approve(nodeRunner.address, NFTPrice * 2, {"from": account2})
+    nodeRunner.mintNodeRunnerNFT(1, {"from": account2})
+
+    with pytest.raises(exceptions.VirtualMachineError) as ex:
+        cardinalHouseMarketplace.createMarketItem(nodeRunner.address, 1, 1000, {"from": account2})
+    assert "This isn't a whitelisted NFT contract." in str(ex.value)
+
+def test_user_cant_list_Node_Runner_NFT():
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("This test is only for local blockchains.")
+
+    account = retrieve_account()
+    account2 = retrieve_account(2)
+    cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house()
+    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
+    uniswapPair = cardinalToken.uniswapPair()
+    cardinalToken.transfer(uniswapPair, LIQUIDITY_SUPPLY, {"from": account})
+    cardinalToken.setContractTokenDivisor(1, {"from": account})
+
+    listingFee = 1000
+    maxNFTs = 20
+    NFTPrice = 10000
+    nodeRunner = deploy_node_runner(cardinalHouseMarketplace.address, cardinalNFT.address, cardinalToken.address, listingFee, maxNFTs, NFTPrice)
+    cardinalToken.excludeUserFromFees(nodeRunner.address, {"from": account})
+    nodeRunner.updateNFTPriceInUSDC(NFTPrice * 2, {"from": account})
+    nodeRunner.updateUSDCAddress(cardinalToken.address, {"from": account})
+
+    # Act
+    cardinalToken.transfer(account2.address, NFTPrice * 2, {"from": account})
+    cardinalNFT.setAdminUser(account.address, True, {"from": account})
+    cardinalNFT.addMember(account2.address, {"from": account})
+
+    cardinalToken.approve(nodeRunner.address, NFTPrice * 2, {"from": account2})
+    nodeRunner.mintNodeRunnerNFT(1, {"from": account2})
+
+    cardinalHouseMarketplace.whiteListNFTContract(nodeRunner.address, cardinalToken.address, True, {"from": account})
+    cardinalHouseMarketplace.createMarketItem(nodeRunner.address, 1, NFTPrice * 3, {"from": account2, "value": listingFee})
+
+    # Assert
+    # Assert the NFT was added to the marketplace properly
+    marketplaceNFTs = cardinalHouseMarketplace.fetchMarketItems()
+    createdNFT = marketplaceNFTs[0]
+    
+    assert createdNFT[0] == 1
+    assert createdNFT[1] == nodeRunner.address
+    assert createdNFT[2] == 1
+    assert createdNFT[3] == account2.address
+    assert createdNFT[4] == ZERO_ADDRESS
+    assert createdNFT[5] == NFTPrice * 3
+    assert createdNFT[6] == False
+    assert createdNFT[7] == ""
+    assert createdNFT[8] == listingFee
+
+def test_non_member_cant_purchase_Node_Runner_NFT():
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("This test is only for local blockchains.")
+
+    account = retrieve_account()
+    account2 = retrieve_account(2)
+    account3 = retrieve_account(3)
+    cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house()
+    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
+    uniswapPair = cardinalToken.uniswapPair()
+    cardinalToken.transfer(uniswapPair, LIQUIDITY_SUPPLY, {"from": account})
+    cardinalToken.setContractTokenDivisor(1, {"from": account})
+
+    listingFee = 1000
+    maxNFTs = 20
+    NFTPrice = 10000
+    nodeRunner = deploy_node_runner(cardinalHouseMarketplace.address, cardinalNFT.address, cardinalToken.address, listingFee, maxNFTs, NFTPrice)
+    cardinalToken.excludeUserFromFees(nodeRunner.address, {"from": account})
+    nodeRunner.updateNFTPriceInUSDC(NFTPrice * 2, {"from": account})
+    nodeRunner.updateUSDCAddress(cardinalToken.address, {"from": account})
+
+    # Act / Assert
+    cardinalToken.transfer(account2.address, NFTPrice * 2, {"from": account})
+    cardinalToken.transfer(account3.address, NFTPrice * 5, {"from": account})
+    cardinalNFT.setAdminUser(account.address, True, {"from": account})
+    cardinalNFT.addMember(account2.address, {"from": account})
+
+    cardinalToken.approve(nodeRunner.address, NFTPrice * 2, {"from": account2})
+    nodeRunner.mintNodeRunnerNFT(1, {"from": account2})
+
+    cardinalHouseMarketplace.whiteListNFTContract(nodeRunner.address, cardinalToken.address, True, {"from": account})
+    cardinalHouseMarketplace.createMarketItem(nodeRunner.address, 1, NFTPrice * 3, {"from": account2, "value": listingFee})
+
+    with pytest.raises(exceptions.VirtualMachineError) as ex:
+        cardinalHouseMarketplace.createMarketSale(nodeRunner.address, 1, NFTPrice * 3, {"from": account3})
+    assert "Only Cardinal Crew Members can participate in Node Runner!" in str(ex.value)
+
+def test_member_can_purchase_Node_Runner_NFT():
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("This test is only for local blockchains.")
+
+    account = retrieve_account()
+    account2 = retrieve_account(2)
+    account3 = retrieve_account(3)
+    cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house()
+    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
+    uniswapPair = cardinalToken.uniswapPair()
+    cardinalToken.transfer(uniswapPair, LIQUIDITY_SUPPLY, {"from": account})
+    cardinalToken.setContractTokenDivisor(1, {"from": account})
+
+    listingFee = 1000
+    maxNFTs = 20
+    NFTPrice = 10000
+    nodeRunner = deploy_node_runner(cardinalHouseMarketplace.address, cardinalNFT.address, cardinalToken.address, listingFee, maxNFTs, NFTPrice)
+    cardinalToken.excludeUserFromFees(nodeRunner.address, {"from": account})
+    nodeRunner.updateNFTPriceInUSDC(NFTPrice * 2, {"from": account})
+    nodeRunner.updateUSDCAddress(cardinalToken.address, {"from": account})
+
+    # Act / Assert
+    cardinalToken.transfer(account2.address, NFTPrice * 2, {"from": account})
+    cardinalToken.transfer(account3.address, NFTPrice * 5, {"from": account})
+    cardinalNFT.setAdminUser(account.address, True, {"from": account})
+    cardinalNFT.addMember(account2.address, {"from": account})
+    cardinalNFT.addMember(account3.address, {"from": account})
+
+    cardinalToken.approve(nodeRunner.address, NFTPrice * 2, {"from": account2})
+    nodeRunner.mintNodeRunnerNFT(1, {"from": account2})
+
+    cardinalHouseMarketplace.whiteListNFTContract(nodeRunner.address, cardinalToken.address, True, {"from": account})
+    cardinalHouseMarketplace.createMarketItem(nodeRunner.address, 1, NFTPrice * 3, {"from": account2, "value": listingFee})
+
+    cardinalToken.approve(cardinalHouseMarketplace.address, NFTPrice * 3, {"from": account3})
+    cardinalHouseMarketplace.createMarketSale(nodeRunner.address, 1, NFTPrice * 3, {"from": account3})
+
+    assert nodeRunner.ownerOf(1) == account3.address
