@@ -365,6 +365,8 @@ def test_user_cant_list_NFT_unless_whitelisted():
     cardinalToken.approve(nodeRunner.address, NFTPrice * 2, {"from": account2})
     nodeRunner.mintNodeRunnerNFT(1, {"from": account2})
 
+    cardinalHouseMarketplace.unWhiteListNFTContract(nodeRunner.address, {"from": account})
+
     with pytest.raises(exceptions.VirtualMachineError) as ex:
         cardinalHouseMarketplace.createMarketItem(nodeRunner.address, 1, 1000, {"from": account2})
     assert "This isn't a whitelisted NFT contract." in str(ex.value)

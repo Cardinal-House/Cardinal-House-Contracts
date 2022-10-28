@@ -3,6 +3,7 @@ pragma solidity 0.8.8;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -12,7 +13,7 @@ import './CardinalNFT.sol';
  * @title Node Runner Contract
  * @dev NFT contract that will be used with the marketplace contract
  */
-contract NodeRunner is ERC721URIStorage, Ownable {
+contract NodeRunner is ERC721URIStorage, ERC721Enumerable, Ownable {
     using Counters for Counters.Counter;
 
     // Counter to give each NFT a unique ID.
@@ -175,27 +176,32 @@ contract NodeRunner is ERC721URIStorage, Ownable {
     * @return list of token URIs for a user's NFTs
      */
     function getUserTokenURIs(address userAddress) external view returns (string[] memory) {
-        uint NFTCount = _tokenIds.current();
-        uint userNFTCount = 0;
-        uint currentIndex = 0;
+        uint256 userTokenCount = balanceOf(userAddress);
+        uint256 currTokenId = 0;
+        string[] memory userNFTTokenURIs = new string[](userTokenCount);
 
-        for (uint id = 1; id <= NFTCount; id++) {
-            if (ownerOf(id) == userAddress) {
-                userNFTCount += 1;
-            }
+        for (uint256 i; i < userTokenCount; i++) {
+            currTokenId = tokenOfOwnerByIndex(userAddress, i);
+            userNFTTokenURIs[i] = tokenURI(currTokenId);
         }
 
-        string[] memory userNFTTokenURIs = new string[](userNFTCount);
-
-        for (uint id = 1; id <= NFTCount; id++) {
-            if (ownerOf(id) == userAddress) {
-                string memory currentNFT = tokenURI(id);
-                userNFTTokenURIs[currentIndex] = currentNFT;
-                currentIndex += 1;
-            }
-        }
-        
         return userNFTTokenURIs;
+    }
+
+    /**
+    * @dev Function to get all token IDs for tokens that a given user owns.
+    * @param userAddress the user's address to get token IDs of
+    * @return list of token IDs for a user's NFTs
+     */
+    function getUserTokenIDs(address userAddress) external view returns (uint256[] memory) {
+        uint256 userTokenCount = balanceOf(userAddress);
+        uint256[] memory userNFTTokenIDs = new uint256[](userTokenCount);
+
+        for (uint256 i; i < userTokenCount; i++) {
+            userNFTTokenIDs[i] = tokenOfOwnerByIndex(userAddress, i);
+        }
+
+        return userNFTTokenIDs;
     }
 
     /**
@@ -270,5 +276,25 @@ contract NodeRunner is ERC721URIStorage, Ownable {
     */
     function addressIsMember(address user) external returns (bool) {
         return cardinalNFT.addressIsMember(user);
+    }
+
+    // Override function since both ERC721URIStorage and ERC721Enumerable inherit from ERC721 and so both have a definition for _burn.
+    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+        super._burn(tokenId);
+    }
+
+    // Override function since both ERC721URIStorage and ERC721Enumerable inherit from ERC721 and so both have a definition for _beforeTokenTransfer.
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal override(ERC721, ERC721Enumerable) {
+        super._beforeTokenTransfer(from, to, tokenId);
+    }
+
+    // Override function since both ERC721URIStorage and ERC721Enumerable inherit from ERC721 and so both have a definition for supportsInterface.
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721Enumerable) returns (bool) {
+        return super.supportsInterface(interfaceId);
+    }
+
+    // Override function since both ERC721URIStorage and ERC721Enumerable inherit from ERC721 and so both have a definition for tokenURI.
+    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+        return super.tokenURI(tokenId);
     }
 }

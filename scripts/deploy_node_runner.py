@@ -1,9 +1,11 @@
-from brownie import network, config, NodeRunner
+from brownie import network, config, NodeRunner, CardinalHouseMarketplace
 from brownie.network.contract import Contract
 from scripts.common_funcs import retrieve_account, LOCAL_BLOCKCHAIN_ENVIRONMENTS, DONT_PUBLISH_SOURCE_ENVIRONMENTS
+from pinatapy import PinataPy
 from web3 import Web3
+import os
 
-CARDINAL_MARKETPLACE_ADDRESS_TEST = "0x8C1A5908A937d6F06e54b4994eE7B6b2d4d48159"
+CARDINAL_MARKETPLACE_ADDRESS_TEST = "0xe8d93aB8ABC90495FDd5Bd797D8C8b2EBc63b43D"
 CARDINAL_MARKETPLACE_ADDRESS = "0x038F27dec7F9E02f7F0bA6d2e61Bc190258a7F52"
 CARDINAL_NFT_ADDRESS_TEST = "0xEBadD172563627De64f995380820600335027933"
 CARDINAL_NFT_ADDRESS = "0x94E2c821Fe8c7953595544e3DA4500cCC157FCa4"
@@ -11,13 +13,18 @@ USDC_ADDRESS_TEST_REAL = "0xe6b8a5CF854791412c1f6EFC7CAf629f5Df1c747"
 USDC_ADDRESS_TEST = "0x03c83C3Ff23eCE0b81bF8DD64A403F7230522874"
 USDC_ADDRESS = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
 
-MAX_NFTS = "20"
-DEFAULT_LISTING_FEE = Web3.toWei(0, "ether")
+MAX_NFTS = "100"
+NODE_RUNNER_NFT_IMAGE_PATH = "NodeRunnerNFT.png"
+NODE_RUNNER_NFT_NAME = "Genesis DAG Node"
+NODE_RUNNER_NFT_DESCRIPTION = "This Node Runner NFT represents a stake in the first Node Runner DAG Node."
+DEFAULT_LISTING_FEE = Web3.toWei(5, "ether")
 NFT_PRICE_IN_USDC = Web3.toWei(100, "ether")
 
 PROD = False
 
-def deploy_node_runner(cardinalMarketplaceAddress=None, cardinalNFTAddress=None, USDCAddress=None, defaultListingFee=None, maxNFTs=None, NFTPriceInUSDC=None):
+pinata = PinataPy(os.environ["PinataApiKey"], os.environ["PinataSecretApiKey"])
+
+def deploy_node_runner(cardinalMarketplaceAddress=None, cardinalNFTAddress=None, USDCAddress=None, defaultListingFee=None, maxNFTs=None, NFTPriceInUSDC=None, NodeRunnerNFTImagePath=None, NodeRunnerNFTName=None, NodeRunnerNFTDescription=None):
     account = retrieve_account()
 
     currNetwork = network.show_active()
@@ -39,7 +46,31 @@ def deploy_node_runner(cardinalMarketplaceAddress=None, cardinalNFTAddress=None,
     if not NFTPriceInUSDC:
         NFTPriceInUSDC = NFT_PRICE_IN_USDC
 
+    if not NodeRunnerNFTImagePath:
+        NodeRunnerNFTImagePath = NODE_RUNNER_NFT_IMAGE_PATH
+
+    if not NodeRunnerNFTName:
+        NodeRunnerNFTName = NODE_RUNNER_NFT_NAME
+
+    if not NodeRunnerNFTDescription:
+        NodeRunnerNFTDescription = NODE_RUNNER_NFT_DESCRIPTION
+
     publishSource = currNetwork not in DONT_PUBLISH_SOURCE_ENVIRONMENTS
+
+    if PROD:
+        response = pinata.pin_file_to_ipfs(NodeRunnerNFTImagePath)
+
+        currImageURL = f"https://gateway.pinata.cloud/ipfs/{response['IpfsHash']}"
+
+        currTokenURI = {
+            "NFTName": NodeRunnerNFTName,
+            "NFTDescription": NodeRunnerNFTDescription,
+            "image": currImageURL
+        }
+
+        response = pinata.pin_json_to_ipfs(currTokenURI)
+        NodeRunnerTokenURI = f"https://gateway.pinata.cloud/ipfs/{response['IpfsHash']}"
+        print(NodeRunnerTokenURI)
 
     nodeRunner = NodeRunner.deploy(
         cardinalMarketplaceAddress,
@@ -51,6 +82,18 @@ def deploy_node_runner(cardinalMarketplaceAddress=None, cardinalNFTAddress=None,
         {"from": account}, publish_source=publishSource
     )
     print(f"Node Runner deployed to {nodeRunner.address}")
+
+    cardinalMarketplaceABI = CardinalHouseMarketplace.abi
+    cardinalMarketplace = Contract.from_abi("CardinalHouseMarketplace", cardinalMarketplaceAddress, cardinalMarketplaceABI)
+
+    transaction = cardinalMarketplace.whiteListNFTContract(nodeRunner.address, USDCAddress, True, {"from": account})
+    transaction.wait(1)
+
+    print("Successfully whitelisted the Node Runner NFT contract on the Cardinal House Marketplace!")
+
+    if PROD:
+        nodeRunner.updateNodeRunnerTokenURI(NodeRunnerTokenURI, {"from": account})
+        print("Successfully set the token URI for the Node Runner contract!")
 
     return nodeRunner
 
