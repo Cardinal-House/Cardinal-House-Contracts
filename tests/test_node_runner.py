@@ -50,6 +50,16 @@ def test_user_can_purchase_node_runner_NFT():
     assert nodeRunner.ownerOf(1) == account2.address
     assert nodeRunner.tokenIdToListingFee(1) == listingFee
 
+    userTokenURIs = nodeRunner.getUserTokenURIs(account2.address)
+    assert len(userTokenURIs) == 1
+
+    userTokenIDs = nodeRunner.getUserTokenIDs(account2.address)
+    assert len(userTokenIDs) == 1
+    assert userTokenIDs[0] == 1
+
+    userTokenIdByIndex = nodeRunner.tokenOfOwnerByIndex(account2.address, 0)
+    assert userTokenIdByIndex == 1
+
 def test_user_cant_purchase_NFT_unless_member():
     # Arrange
     if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:

@@ -49,7 +49,7 @@ mintToAddresses = [
     "0xe0FF396Ae31Dc24848957bca282Bd07c01119B89",
     "0x1c343ED0e03Fc5fB9a0804214E614963E6D2Ff00",
     "0x9884705F4E825a2174C115280c4d147379d5C33D",
-    "0xf2A8E743F71E705edA3524e7812E7Eb9c8A2C78B ",
+    "0xf2A8E743F71E705edA3524e7812E7Eb9c8A2C78B",
 ]
 images = [
     # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 1.png",
@@ -118,6 +118,11 @@ tokenIds = [
     # "39",
     # "40",
     # "41",
+    "42",
+    "43",
+    "44",
+    "45",
+    "46",
 ]
 
 startOCNum = 30
