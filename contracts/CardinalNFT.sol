@@ -3,15 +3,16 @@ pragma solidity 0.8.8;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./CardinalToken.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title Cardinal House NFT Contract
  * @dev NFT contract that will be used with the marketplace contract
  */
-contract CardinalNFT is ERC721URIStorage, Ownable {
+contract CardinalNFT is ERC721URIStorage, ERC721Enumerable, Ownable {
     using Counters for Counters.Counter;
 
     // Counter to give each NFT a unique ID.
@@ -20,8 +21,8 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
     // Address of the Cardinal NFT marketplace.
     address public marketplaceAddress;
 
-    // Contract for the Cardinal Token (CRNL).
-    CardinalToken public cardinalToken;
+    // Contract for USDC - for membership payments
+    IERC20 public USDC;
 
     // Each NFT will be associated with an ID that determines the type of NFT it is
     // This makes it easy to identify sets of NFTs like Original Cardinal NFTs, membership NFTs, and service NFTs
@@ -66,8 +67,8 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
     // The token URI for all membership NFTs
     string public membershipTokenURI;
 
-    // The current price of the membership NFT in Cardinal Tokens
-    uint256 public membershipPriceInCardinalTokens;
+    // The current price of the membership NFT in USDC
+    uint256 public membershipPriceInUSDC;
 
     event membershipNFTMinted(address indexed owner, uint256 indexed tokenId);
     event memberChargedForMembership(address indexed member, uint256 indexed tokenId, uint256 membershipPrice, uint256 currTimeStamp);
@@ -77,9 +78,9 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
     event typeIdUpdated(string indexed typeIdThatWasUpdated, uint256 indexed newTypeId);
     event memberDiscountSet(address indexed member, uint256 indexed discountAmount);
 
-    constructor(address _marketplaceAddress, address payable _cardinalTokenAddress) ERC721("CardinalHouseNFT", "CRNLNFT") {
+    constructor(address _marketplaceAddress, address _USDC) ERC721("CardinalHouseNFT", "CRNLNFT") {
         marketplaceAddress = _marketplaceAddress;
-        cardinalToken = CardinalToken(_cardinalTokenAddress);
+        USDC = IERC20(_USDC);
     }
 
     /**
@@ -135,20 +136,20 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
     }
 
     /**
-    * @dev Allows someone to mint a membership NFT by paying Cardinal Tokens
+    * @dev Allows someone to mint a membership NFT by paying USDC
     * @return the ID of the newly minted membership NFT
      */
     function mintMembershipNFT() external returns (uint) {
-        uint256 currMembershipPriceInCardinalTokens = membershipPriceInCardinalTokens;
+        uint256 currMembershipPriceInUSDC = membershipPriceInUSDC;
 
         if (addressToMembershipDiscount[msg.sender] > 0) {
-            currMembershipPriceInCardinalTokens = membershipPriceInCardinalTokens * addressToMembershipDiscount[msg.sender] / 100;
+            currMembershipPriceInUSDC = membershipPriceInUSDC * addressToMembershipDiscount[msg.sender] / 100;
         }
 
-        require(cardinalToken.balanceOf(msg.sender) >= currMembershipPriceInCardinalTokens, "You don't have enough Cardinal Tokens to pay for the membership NFT.");
-        require(cardinalToken.allowance(msg.sender, address(this)) >= currMembershipPriceInCardinalTokens, "You haven't approved this contract to spend enough of your Cardinal Tokens to pay for the membership NFT.");
+        require(USDC.balanceOf(msg.sender) >= currMembershipPriceInUSDC, "You don't have enough USDC to pay for the membership NFT.");
+        require(USDC.allowance(msg.sender, address(this)) >= currMembershipPriceInUSDC, "You haven't approved this contract to spend enough of your USDC to pay for the membership NFT.");
         
-        cardinalToken.transferFrom(msg.sender, address(this), currMembershipPriceInCardinalTokens);
+        USDC.transferFrom(msg.sender, address(this), currMembershipPriceInUSDC);
 
         _tokenIds.increment();
         uint256 newItemId = _tokenIds.current();
@@ -189,18 +190,18 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
         require(ownerOf(tokenId) == member, "This address doesn't own the NFT specified.");
         require(ownerOf(tokenId) != owner() && ownerOf(tokenId) != marketplaceAddress, "Can't charge the owner or marketplace for the membership.");
 
-        uint256 currMembershipPriceInCardinalTokens = membershipPriceInCardinalTokens;
+        uint256 currMembershipPriceInUSDC = membershipPriceInUSDC;
 
         if (addressToMembershipDiscount[member] > 0) {
-            currMembershipPriceInCardinalTokens = membershipPriceInCardinalTokens * addressToMembershipDiscount[member] / 100;
+            currMembershipPriceInUSDC = membershipPriceInUSDC * addressToMembershipDiscount[member] / 100;
         }
 
-        if (cardinalToken.balanceOf(member) < currMembershipPriceInCardinalTokens || cardinalToken.allowance(member, address(this)) < currMembershipPriceInCardinalTokens) {
+        if (USDC.balanceOf(member) < currMembershipPriceInUSDC || USDC.allowance(member, address(this)) < currMembershipPriceInUSDC) {
             burnMembershipNFT(tokenId);
             return 1;
         }
 
-        cardinalToken.transferFrom(member, address(this), currMembershipPriceInCardinalTokens);
+        USDC.transferFrom(member, address(this), currMembershipPriceInUSDC);
 
         if (currTimeStamp > 0) {
             membershipNFTToLastPaid[tokenId] = currTimeStamp;
@@ -211,16 +212,16 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
 
         addressToMembershipDiscount[member] = 0;
 
-        emit memberChargedForMembership(member, tokenId, currMembershipPriceInCardinalTokens, currTimeStamp);
+        emit memberChargedForMembership(member, tokenId, currMembershipPriceInUSDC, currTimeStamp);
 
         return 0;
     }
 
     /**
-    * @dev Only owner function to withdraw the Cardinal Tokens that are paid to this contract for the Membership NFTs.
+    * @dev Only owner function to withdraw the USDC that are paid to this contract for the Membership NFTs.
      */
     function withdrawMembershipNFTFunds() external onlyOwner {
-        cardinalToken.transfer(owner(), cardinalToken.balanceOf(address(this)));
+        USDC.transfer(owner(), USDC.balanceOf(address(this)));
     }
 
     /**
@@ -275,28 +276,33 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
     * @return list of token URIs for a user's NFTs
      */
     function getUserTokenURIs(address userAddress) external view returns (string[] memory) {
-        uint NFTCount = _tokenIds.current();
-        uint userNFTCount = 0;
-        uint currentIndex = 0;
+        uint256 userTokenCount = balanceOf(userAddress);
+        uint256 currTokenId = 0;
+        string[] memory userNFTTokenURIs = new string[](userTokenCount);
 
-        for (uint id = 1; id <= NFTCount; id++) {
-            if (ownerOf(id) == userAddress) {
-                userNFTCount += 1;
-            }
+        for (uint256 i; i < userTokenCount; i++) {
+            currTokenId = tokenOfOwnerByIndex(userAddress, i);
+            userNFTTokenURIs[i] = tokenURI(currTokenId);
         }
 
-        string[] memory userNFTTokenURIs = new string[](userNFTCount);
-
-        for (uint id = 1; id <= NFTCount; id++) {
-            if (ownerOf(id) == userAddress) {
-                string memory currentNFT = tokenURI(id);
-                userNFTTokenURIs[currentIndex] = currentNFT;
-                currentIndex += 1;
-            }
-        }
-        
         return userNFTTokenURIs;
     }
+
+    /**
+    * @dev Function to get all token IDs for tokens that a given user owns.
+    * @param userAddress the user's address to get token IDs of
+    * @return list of token IDs for a user's NFTs
+     */
+    function getUserTokenIDs(address userAddress) external view returns (uint256[] memory) {
+        uint256 userTokenCount = balanceOf(userAddress);
+        uint256[] memory userNFTTokenIDs = new uint256[](userTokenCount);
+
+        for (uint256 i; i < userTokenCount; i++) {
+            userNFTTokenIDs[i] = tokenOfOwnerByIndex(userAddress, i);
+        }
+
+        return userNFTTokenIDs;
+    }    
 
     /**
     * @dev Function to get all token URIs for Original Cardinal NFTs that a given user owns.
@@ -402,6 +408,15 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
     }
 
     /**
+    * @dev Only owner function to update the timestamp for when a user last paid for their membership.
+    * @param tokenId the token ID to update the membership last paid timestamp for
+    * @param newLastPaid the new timestamp that represents when the user last paid for their membership NFT
+    */
+    function updateMembershipNFTToLastPaid(uint256 tokenId, uint256 newLastPaid) external onlyOwner {
+        membershipNFTToLastPaid[tokenId] = newLastPaid;
+    }
+
+    /**
     * @dev Function to assign an NFT to a whitelist spot so only one address can purchase the NFT.
     * @param whiteListAddress the address of the user who will be able to purchase the NFT
     * @param tokenId the ID of the NFT that the whitelist spot is for
@@ -464,20 +479,20 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
     }
 
     /**
-    * @dev sets the price of the membership NFTs in Cardinal Tokens
-    * @param newMembershipPrice the new price of the membership NFTs in Cardinal Tokens
+    * @dev sets the price of the membership NFTs in USDC
+    * @param newMembershipPrice the new price of the membership NFTs in USDC
      */
     function updateMembershipPrice(uint256 newMembershipPrice) external onlyOwner {
-        membershipPriceInCardinalTokens = newMembershipPrice;
+        membershipPriceInUSDC = newMembershipPrice;
         emit membershipPriceUpdated(newMembershipPrice);
     }
 
     /**
-    * @dev Only owner function to set the reference to the Cardinal Token contract
-    * @param cardinalTokenAddress the address for the Cardinal Token contract
+    * @dev Only owner function to set the reference to the USDC contract
+    * @param _USDC the address for the USDC contract
     */
-    function setCardinalToken(address payable cardinalTokenAddress) external onlyOwner {
-        cardinalToken = CardinalToken(cardinalTokenAddress);
+    function setUSDCContract(address _USDC) external onlyOwner {
+        USDC = IERC20(_USDC);
     }
 
     /**
@@ -519,4 +534,24 @@ contract CardinalNFT is ERC721URIStorage, Ownable {
         addressToMembershipDiscount[memberAddress] = discountAmount;
         emit memberDiscountSet(memberAddress, discountAmount);
     }
+
+    // Override function since both ERC721URIStorage and ERC721Enumerable inherit from ERC721 and so both have a definition for _burn.
+    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+        super._burn(tokenId);
+    }
+
+    // Override function since both ERC721URIStorage and ERC721Enumerable inherit from ERC721 and so both have a definition for _beforeTokenTransfer.
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal override(ERC721, ERC721Enumerable) {
+        super._beforeTokenTransfer(from, to, tokenId);
+    }
+
+    // Override function since both ERC721URIStorage and ERC721Enumerable inherit from ERC721 and so both have a definition for supportsInterface.
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721Enumerable) returns (bool) {
+        return super.supportsInterface(interfaceId);
+    }
+
+    // Override function since both ERC721URIStorage and ERC721Enumerable inherit from ERC721 and so both have a definition for tokenURI.
+    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+        return super.tokenURI(tokenId);
+    }    
 }

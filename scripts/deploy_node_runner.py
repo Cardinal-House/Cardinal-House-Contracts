@@ -20,7 +20,7 @@ NODE_RUNNER_NFT_DESCRIPTION = "Phase One Genesis DAG Node NFT - This NFT represe
 DEFAULT_LISTING_FEE = Web3.toWei(5, "ether")
 NFT_PRICE_IN_USDC = 100 * pow(10, 6)
 
-PROD = True
+PROD = False
 
 pinata = PinataPy(os.environ["PinataApiKey"], os.environ["PinataSecretApiKey"])
 

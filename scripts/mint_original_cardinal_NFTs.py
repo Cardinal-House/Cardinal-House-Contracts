@@ -45,11 +45,12 @@ mintToAddresses = [
     # "0x8903FdDa42120CE6cE5EE158ED2cd085aB5c7eC0",
     # "0xa31539145CBf7F5aA7B4e72FaC3C520a86Cec00E",
     # "0x701C139a3513E73Dd75bd97B4e2737Cf842B40a4",
-    "0xB824a716E5b8B6Cc28B15aaF04d424D50Aa75C99",
-    "0xe0FF396Ae31Dc24848957bca282Bd07c01119B89",
-    "0x1c343ED0e03Fc5fB9a0804214E614963E6D2Ff00",
-    "0x9884705F4E825a2174C115280c4d147379d5C33D",
-    "0xf2A8E743F71E705edA3524e7812E7Eb9c8A2C78B",
+    # "0xB824a716E5b8B6Cc28B15aaF04d424D50Aa75C99",
+    # "0xe0FF396Ae31Dc24848957bca282Bd07c01119B89",
+    # "0x1c343ED0e03Fc5fB9a0804214E614963E6D2Ff00",
+    # "0x9884705F4E825a2174C115280c4d147379d5C33D",
+    # "0xf2A8E743F71E705edA3524e7812E7Eb9c8A2C78B",
+    "0x000469f3f9cf8F58c2f1796f94a58CDDeaE8dc2E"
 ]
 images = [
     # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 1.png",
@@ -81,11 +82,12 @@ images = [
     # "Original Cardinal NFT 27.png",
     # "Original Cardinal NFT 28.png",
     # "Original Cardinal NFT 29.png",
-    "Original Cardinal NFT 30.png",
-    "Original Cardinal NFT 31.png",
-    "Original Cardinal NFT 32.png",
-    "Original Cardinal NFT 33.png",
-    "Original Cardinal NFT 34.png",
+    # "Original Cardinal NFT 30.png",
+    # "Original Cardinal NFT 31.png",
+    # "Original Cardinal NFT 32.png",
+    # "Original Cardinal NFT 33.png",
+    # "Original Cardinal NFT 34.png",
+    "Original Cardinal NFT 35.png",
 ]
 
 tokenIds = [
@@ -118,14 +120,15 @@ tokenIds = [
     # "39",
     # "40",
     # "41",
-    "42",
-    "43",
-    "44",
-    "45",
-    "46",
+    # "42",
+    # "43",
+    # "44",
+    # "45",
+    # "46",
+    "49"
 ]
 
-startOCNum = 30
+startOCNum = 35
 
 pinata = PinataPy(os.environ["PinataApiKey"], os.environ["PinataSecretApiKey"])
 

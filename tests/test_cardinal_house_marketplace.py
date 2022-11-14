@@ -81,7 +81,7 @@ def test_membership_discount():
     assert cardinalNFT.tokenIdToTypeId(account2MembershipNFTID) == cardinalNFT.membershipTypeId()
     assert cardinalNFT.ownerOf(account2MembershipNFTID) == account2.address
 
-    cardinalNFTPrice = cardinalNFT.membershipPriceInCardinalTokens()
+    cardinalNFTPrice = cardinalNFT.membershipPriceInUSDC()
     
     assert cardinalToken.balanceOf(account2.address) == account2CRNLBalance - (cardinalNFTPrice * account2MembershipDiscount / 100)
 
@@ -96,7 +96,7 @@ def test_membership_discount():
     account2MembershipDiscount = 80
     cardinalNFT.setMemberDiscount(account2.address, account2MembershipDiscount, {"from": account})
 
-    chargedMembers, chargedNFTIds, lostMembers, burntNFTs = charge_for_memberships(cardinalToken.address, cardinalNFT.address, cardinalHouseMarketplace.address, membershipSecondsTillRecharge)
+    chargedMembers, chargedNFTIds, lostMembers, burntNFTs = charge_for_memberships(cardinalNFT.address, cardinalHouseMarketplace.address, membershipSecondsTillRecharge)
 
     assert cardinalNFT.addressToMembershipDiscount(account2.address) == 0
     assert cardinalNFT.ownerOf(account2MembershipNFTID) == account2.address
@@ -162,7 +162,7 @@ def test_charge_for_memberships_script():
     # Account 1 and Account 4 should have nothing happen with their membership NFTs (Account 1 since the deployer never gets charged).
     # Account 2 and Account 3 should be charged for their membership NFTs.
     # Account 5 should have its membership NFT burnt since it doesn't have the tokens to pay for the charge.
-    chargedMembers, chargedNFTIds, lostMembers, burntNFTs = charge_for_memberships(cardinalToken.address, cardinalNFT.address, cardinalHouseMarketplace.address, membershipSecondsTillRecharge)
+    chargedMembers, chargedNFTIds, lostMembers, burntNFTs = charge_for_memberships(cardinalNFT.address, cardinalHouseMarketplace.address, membershipSecondsTillRecharge)
 
     # Assert that the arrays returned are correct.
     assert len(chargedMembers) == 2
@@ -220,21 +220,21 @@ def test_users_can_mint_membership_NFTs():
     newMembershipTokenURI = "New Membership Token URI"
     cardinalNFT.updateMembershipTokenURI(newMembershipTokenURI, {"from": account})
 
-    assert cardinalNFT.membershipPriceInCardinalTokens() == NFTMembershipPrice
+    assert cardinalNFT.membershipPriceInUSDC() == NFTMembershipPrice
     assert cardinalNFT.membershipTokenURI() == newMembershipTokenURI
 
     with pytest.raises(exceptions.VirtualMachineError) as ex:
         cardinalNFT.mintMembershipNFT({"from": account2})
-    assert "You don't have enough Cardinal Tokens to pay for the membership NFT." in str(ex.value)
+    assert "You don't have enough USDC to pay for the membership NFT." in str(ex.value)
 
     # Give some tokens to account2.
     cardinalToken.transfer(account2.address, 1000000000, {"from": account})
 
     with pytest.raises(exceptions.VirtualMachineError) as ex:
         cardinalNFT.mintMembershipNFT({"from": account2})
-    assert "You haven't approved this contract to spend enough of your Cardinal Tokens to pay for the membership NFT." in str(ex.value)
+    assert "You haven't approved this contract to spend enough of your USDC to pay for the membership NFT." in str(ex.value)
 
-    # Approve the Cardinal NFT contract to spend the Cardinal Tokens to mint the membership NFT.
+    # Approve the Cardinal NFT contract to spend the Cardinal Tokens (USDC when for real) to mint the membership NFT.
     cardinalToken.approve(cardinalNFT.address, NFTMembershipPrice, {"from": account2})
 
     # This mint should be successful now since allowance and balance are good now for account2.
@@ -395,7 +395,7 @@ def test_owner_can_charge_for_membership_NFTs():
     assert cardinalNFT.ownerOf(account4TokenId) == account4.address
     assert cardinalNFT.addressIsMember(account4.address) == True
     assert account4TokenId in cardinalNFT.getMembershipTokenIds()
-    assert cardinalToken.balanceOf(account4.address) == account4InitialCRNLBalance - cardinalNFT.membershipPriceInCardinalTokens()
+    assert cardinalToken.balanceOf(account4.address) == account4InitialCRNLBalance - cardinalNFT.membershipPriceInUSDC()
     assert epoch_time == cardinalNFT.membershipNFTToLastPaid(account4TokenId)
 
     # Withdraw the funds from the NFT contract to the owner address.

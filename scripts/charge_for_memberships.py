@@ -1,4 +1,4 @@
-from brownie import network, config, chain, CardinalToken, CardinalNFT
+from brownie import network, config, chain, CardinalNFT
 from brownie.network.contract import Contract
 from scripts.common_funcs import retrieve_account
 from datetime import datetime
@@ -8,27 +8,21 @@ import math
 import csv
 import os
 
-CARDINAL_TOKEN_ADDRESS_TEST = "0x03c83C3Ff23eCE0b81bF8DD64A403F7230522874"
-CARDINAL_TOKEN_ADDRESS = "0x6B627cF7D9D2fF72fCa23bb43dA8350f42577CEa"
 CARDINAL_NFT_ADDRESS_TEST = "0x2B579760ff3B8B899454370e765Bb748B146aCF0"
-CARDINAL_NFT_ADDRESS = "0x94E2c821Fe8c7953595544e3DA4500cCC157FCa4"
+CARDINAL_NFT_ADDRESS = "0x57381fA9a67f7c3EAD677BD2cCD41fB583c9Ce3c"
 CARDINAL_HOUSE_MARKETPLACE_ADDRESS_TEST = "0xFa246fCF66056BFa737027ef24c8410248eD9041"
 CARDINAL_HOUSE_MARKETPLACE_ADDRESS = "0x87dD7CC57E95cb288274319EbD33ED0fA640CBEf"
 PROD = True
 
 MEMBERSHIP_SECONDS_TILL_RECHARGE = 2592000
 
-def charge_for_memberships(cardinalTokenAddress=None, cardinalNFTAddress=None, cardinalHouseMarketplaceAddress=None, membershipSecondsTillRecharge=MEMBERSHIP_SECONDS_TILL_RECHARGE):
+def charge_for_memberships(cardinalNFTAddress=None, cardinalHouseMarketplaceAddress=None, membershipSecondsTillRecharge=MEMBERSHIP_SECONDS_TILL_RECHARGE):
     account = retrieve_account()
 
     currNetwork = network.show_active()
     if PROD:
-        cardinalTokenAddress = CARDINAL_TOKEN_ADDRESS
         cardinalNFTAddress = CARDINAL_NFT_ADDRESS
         cardinalHouseMarketplaceAddress = CARDINAL_HOUSE_MARKETPLACE_ADDRESS
-
-    if not cardinalTokenAddress:
-        cardinalTokenAddress = CARDINAL_TOKEN_ADDRESS_TEST
     
     if not cardinalNFTAddress:
         cardinalNFTAddress = CARDINAL_NFT_ADDRESS_TEST
@@ -43,9 +37,6 @@ def charge_for_memberships(cardinalTokenAddress=None, cardinalNFTAddress=None, c
     currDateStr = datetime.strftime(currDate, "%Y-%m-%d")
     if not os.path.exists(f"logs/{currDateStr}"):
         os.mkdir(f"logs/{currDateStr}")
-
-    cardinalTokenABI = CardinalToken.abi
-    cardinalToken = Contract.from_abi("CardinalToken", cardinalTokenAddress, cardinalTokenABI)
 
     cardinalNFTABI = CardinalNFT.abi
     cardinalNFT = Contract.from_abi("CardinalNFT", cardinalNFTAddress, cardinalNFTABI)
