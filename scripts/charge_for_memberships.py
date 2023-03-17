@@ -4,6 +4,7 @@ from scripts.common_funcs import retrieve_account
 from datetime import datetime
 from pathlib import Path
 from web3 import Web3
+import time
 import math
 import csv
 import os
@@ -60,20 +61,28 @@ def charge_for_memberships(cardinalNFTAddress=None, cardinalHouseMarketplaceAddr
             membershipLastPaidTimestamp = cardinalNFT.membershipNFTToLastPaid(membershipNFTId)
 
             if epoch_time - membershipLastPaidTimestamp >= membershipSecondsTillRecharge:
-                chargeResult = cardinalNFT.chargeMemberForMembership(NFTOwner, membershipNFTId, epoch_time, {"from": account})
-                
-                if 'return_value' in dir(chargeResult):
-                    chargeResult = chargeResult.return_value
+                completed = False
 
-                if chargeResult == 0:
-                    chargedMembers.append(NFTOwner)
-                elif not cardinalNFT.addressIsMember(NFTOwner):
-                    lostMembers.append(NFTOwner)
+                while not completed:
+                    time.sleep(3)
+                    try:
+                        chargeResult = cardinalNFT.chargeMemberForMembership.call(NFTOwner, membershipNFTId, epoch_time, {"from": account})
+                        chargeResultTx = cardinalNFT.chargeMemberForMembership(NFTOwner, membershipNFTId, epoch_time, {"from": account})
+                        chargeResultTx.wait(1)
 
-                if cardinalNFT.ownerOf(membershipNFTId) == NFTOwner:
-                    chargedNFTIds.append(membershipNFTId)
-                else:
-                    burntNFTs.append(membershipNFTId)
+                        if chargeResult == 0:
+                            chargedMembers.append(NFTOwner)
+                        elif not cardinalNFT.addressIsMember(NFTOwner):
+                            lostMembers.append(NFTOwner)
+
+                        if cardinalNFT.ownerOf(membershipNFTId) == NFTOwner:
+                            chargedNFTIds.append(membershipNFTId)
+                        else:
+                            burntNFTs.append(membershipNFTId)   
+
+                        completed = True                 
+                    except:
+                        completed = False
 
     # Any final checks?
 

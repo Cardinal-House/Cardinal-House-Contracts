@@ -12,7 +12,7 @@ import csv
 import os
 
 CARDINAL_NFT_ADDRESS_TEST = "0x92259eB95029965d82edf81A996Add27c6b6a54a"
-CARDINAL_NFT_ADDRESS = "0x94E2c821Fe8c7953595544e3DA4500cCC157FCa4"
+CARDINAL_NFT_ADDRESS = "0x57381fA9a67f7c3EAD677BD2cCD41fB583c9Ce3c"
 PROD = True
 
 mintToAddresses = [
@@ -50,7 +50,17 @@ mintToAddresses = [
     # "0x1c343ED0e03Fc5fB9a0804214E614963E6D2Ff00",
     # "0x9884705F4E825a2174C115280c4d147379d5C33D",
     # "0xf2A8E743F71E705edA3524e7812E7Eb9c8A2C78B",
-    "0x000469f3f9cf8F58c2f1796f94a58CDDeaE8dc2E"
+    # "0x000469f3f9cf8F58c2f1796f94a58CDDeaE8dc2E",
+    # "0xf65C572C797dcEc550c656F4dfb458f34EFB255A",
+    # "0x0D61F83C20A9daF284aC3e576074Ae18D64F1404",
+    # "0x160Cf6551ee3d910f673AF762D5a2f1bd4855be1",
+    # "0xda53FBA9E7d5ec325808a43615280c5886a0b47E",
+    # "0xf1bF108E81DD7257D491a6cd2575156B8afe25cB",
+    # "0x219E5dCb3a20FA6B9653fE8534544CEF342132eC",
+    # "0x534ec10913f40a271cD46644a6bB54a0152916c6",
+    # "0xC31cA0dFc4537d4c214c3aE94a14442D50729401",
+    "0xF7a403828e313BD786462afeBB9568F0fDaB07ba",
+    "0x6E85929Cb0E92269E5ff5fd6a6cd3F378C41b316"
 ]
 images = [
     # "D:\\Cardinal House Art\\Original Cardinal NFTs\\Original Cardinal NFT 1.png",
@@ -87,7 +97,17 @@ images = [
     # "Original Cardinal NFT 32.png",
     # "Original Cardinal NFT 33.png",
     # "Original Cardinal NFT 34.png",
-    "Original Cardinal NFT 35.png",
+    # "Original Cardinal NFT 35.png",
+    # "Original Cardinal NFT 36.png",
+    # "Original Cardinal NFT 37.png",
+    # "Original Cardinal NFT 38.png",
+    # "Original Cardinal NFT 39.png",
+    # "Original Cardinal NFT 40.png",
+    # "Original Cardinal NFT 41.png",
+    # "Original Cardinal NFT 42.png",
+    # "Original Cardinal NFT 43.png",
+    "Original Cardinal NFT 44.png",
+    "Original Cardinal NFT 45.png"
 ]
 
 tokenIds = [
@@ -125,10 +145,20 @@ tokenIds = [
     # "44",
     # "45",
     # "46",
-    "49"
+    # "49",
+    # "48",
+    # "49",
+    # "50",
+    # "51",
+    # "52",
+    # "53",
+    # "54",
+    # "55",
+    "56",
+    "57"
 ]
 
-startOCNum = 35
+startOCNum = 44
 
 pinata = PinataPy(os.environ["PinataApiKey"], os.environ["PinataSecretApiKey"])
 
@@ -173,9 +203,11 @@ def mint_original_cardinal_NFTs(cardinalNFTAddress=None, mintToAddresses=mintToA
         newTokenURI = f"https://gateway.pinata.cloud/ipfs/{response['IpfsHash']}"
 
         epoch_time = chain.time()
-        createTokenTransaction = cardinalNFTContract.createToken(newTokenURI, cardinalNFTContract.originalCardinalTypeId(), 0, epoch_time, {"from": account})
+        if int(tokenIds[i]) != 56:
+            createTokenTransaction = cardinalNFTContract.createToken(newTokenURI, cardinalNFTContract.originalCardinalTypeId(), 0, epoch_time, {"from": account})
+            createTokenTransaction.wait(1)
         
-        time.sleep(5)
+        time.sleep(10)
 
         cardinalNFTContract.transferFrom(account.address, currAddress, int(tokenIds[i]), {"from": account})
         

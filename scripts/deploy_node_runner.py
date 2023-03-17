@@ -8,19 +8,19 @@ import os
 CARDINAL_MARKETPLACE_ADDRESS_TEST = "0xe8d93aB8ABC90495FDd5Bd797D8C8b2EBc63b43D"
 CARDINAL_MARKETPLACE_ADDRESS = "0x16fA58F4CcDDcdD0a72fb71EAeDe896c2C4E77B0"
 CARDINAL_NFT_ADDRESS_TEST = "0xEBadD172563627De64f995380820600335027933"
-CARDINAL_NFT_ADDRESS = "0x94E2c821Fe8c7953595544e3DA4500cCC157FCa4"
+CARDINAL_NFT_ADDRESS = "0x57381fA9a67f7c3EAD677BD2cCD41fB583c9Ce3c"
 USDC_ADDRESS_TEST_REAL = "0xe6b8a5CF854791412c1f6EFC7CAf629f5Df1c747"
 USDC_ADDRESS_TEST = "0x03c83C3Ff23eCE0b81bF8DD64A403F7230522874"
 USDC_ADDRESS = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
 
-MAX_NFTS = "194"
-NODE_RUNNER_NFT_IMAGE_PATH = "NodeRunnerNFT.png"
-NODE_RUNNER_NFT_NAME = "Genesis DAG Node"
-NODE_RUNNER_NFT_DESCRIPTION = "Phase One Genesis DAG Node NFT - This NFT represents a portion of a DAG node and also guarantees a whitelist spot for all future Node Runner nodes."
+MAX_NFTS = "252"
+NODE_RUNNER_NFT_IMAGE_PATH = "CryptoLinkRaiseNFT.png"
+NODE_RUNNER_NFT_NAME = "Tier 1 Binance Smart Chain Bridge Miner"
+NODE_RUNNER_NFT_DESCRIPTION = "CryptoLink Tier 1 Binance Smart Chain Bridge Miner - This NFT represents a portion of a CryptoLink Tier 1 Bridge Miner on the Binance Smart Chain."
 DEFAULT_LISTING_FEE = Web3.toWei(5, "ether")
 NFT_PRICE_IN_USDC = 100 * pow(10, 6)
 
-PROD = False
+PROD = True
 
 pinata = PinataPy(os.environ["PinataApiKey"], os.environ["PinataSecretApiKey"])
 
@@ -57,10 +57,13 @@ def deploy_node_runner(cardinalMarketplaceAddress=None, cardinalNFTAddress=None,
 
     publishSource = currNetwork not in DONT_PUBLISH_SOURCE_ENVIRONMENTS
 
+    # NodeRunnerTokenURI = "https://coral-binding-rat-10.mypinata.cloud/ipfs/QmbqQMMjDzL6ZqV8KXAXEqNd3m4SoaYHoWji7AJA7ouJJ6"
+
+    # if PROD and NodeRunnerTokenURI == "":
     if PROD:
         response = pinata.pin_file_to_ipfs(NodeRunnerNFTImagePath)
 
-        currImageURL = f"https://gateway.pinata.cloud/ipfs/{response['IpfsHash']}"
+        currImageURL = f"https://coral-binding-rat-10.mypinata.cloud/ipfs/{response['IpfsHash']}"
 
         currTokenURI = {
             "NFTName": NodeRunnerNFTName,
@@ -69,8 +72,10 @@ def deploy_node_runner(cardinalMarketplaceAddress=None, cardinalNFTAddress=None,
         }
 
         response = pinata.pin_json_to_ipfs(currTokenURI)
-        NodeRunnerTokenURI = f"https://gateway.pinata.cloud/ipfs/{response['IpfsHash']}"
+        NodeRunnerTokenURI = f"https://coral-binding-rat-10.mypinata.cloud/ipfs/{response['IpfsHash']}"
         print(NodeRunnerTokenURI)
+
+    return
 
     nodeRunner = NodeRunner.deploy(
         cardinalMarketplaceAddress,
@@ -79,7 +84,7 @@ def deploy_node_runner(cardinalMarketplaceAddress=None, cardinalNFTAddress=None,
         defaultListingFee,
         maxNFTs,
         NFTPriceInUSDC,
-        {"from": account}, publish_source=publishSource
+        {"from": account}, publish_source=True
     )
     print(f"Node Runner deployed to {nodeRunner.address}")
 

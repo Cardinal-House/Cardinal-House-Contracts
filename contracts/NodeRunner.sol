@@ -7,13 +7,14 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import './CardinalNFT.sol';
 
 /**
  * @title Node Runner Contract
  * @dev NFT contract that will be used with the marketplace contract
  */
-contract NodeRunner is ERC721URIStorage, ERC721Enumerable, Ownable {
+contract NodeRunner is ERC721URIStorage, ERC721Enumerable, Pausable, Ownable {
     using Counters for Counters.Counter;
 
     // Counter to give each NFT a unique ID.
@@ -54,6 +55,7 @@ contract NodeRunner is ERC721URIStorage, ERC721Enumerable, Ownable {
 
     event nodeRunnerNFTMinted(address indexed owner, uint256 indexed tokenId);
     event nodeRewardsDeposited(uint256 indexed amount);
+    event nodeRewardsDepositedChunk(uint256 indexed amount, uint256 startIndex, uint256 endIndex);
     event nodeRewardsClaimed(address indexed claimer, uint256 amount);
     event tokenURIUpdated(uint256 indexed tokenId, string newTokenURI);
 
@@ -67,39 +69,75 @@ contract NodeRunner is ERC721URIStorage, ERC721Enumerable, Ownable {
     }
 
     /**
-    * @dev Allows someone to mint a Node Runner NFT by paying USDC
+    @dev Only owner function to pause the Node Runner minting.
+    */
+    function pauseMinting() external onlyOwner {
+        _pause();
+    }
+
+    /**
+    @dev Only owner function to unpause the Node Runner minting.
+    */
+    function unpauseMinting() external onlyOwner {
+        _unpause();
+    }    
+
+    /**
+    * @dev Private helper function to perform the minting of Node Runner NFTs.
     * @param nftCount the number of NFTs to mint
-    * @return newItemId the ID of the newly minted Node Runner NFT
-     */
-    function mintNodeRunnerNFT(uint256 nftCount) external returns (uint[] memory) {
-        require(nftCount > 0, "You have to mint at least one Node Runner NFt.");
-        require(nftCount + _tokenIds.current() <= maxNFTs, "There aren't enough Node Runner NFTs for this node for you to mint you amount you chose. Another node will be available soon!");
-        require(cardinalNFT.addressIsMember(msg.sender), "Only Cardinal Crew Members can participate in Node Runner.");
-        require(USDC.balanceOf(msg.sender) >= NFTPriceInUSDC, "You don't have enough USDC to pay for the Node Runner NFT.");
-        require(USDC.allowance(msg.sender, address(this)) >= NFTPriceInUSDC, "You haven't approved this contract to spend enough of your USDC to pay for the Node Runner NFT.");
-        
+    * @param receiver the receiver of the NFTs upon minting
+    * @return newItemIds the ID(s) of the newly minted Node Runner NFT(s)
+    */
+    function _mintNodeRunnerNFT(uint256 nftCount, address receiver) private returns (uint[] memory) {
         uint256[] memory mintedNFTIds = new uint256[](nftCount);
         uint256 i = 0;
 
         for (i = 0; i < nftCount; i += 1) {
-            USDC.transferFrom(msg.sender, address(this), NFTPriceInUSDC);
-
             _tokenIds.increment();
             uint256 newItemId = _tokenIds.current();
 
             tokenIdToListingFee[newItemId] = defaultListingFee;
-            _mint(msg.sender, newItemId);
+            _mint(receiver, newItemId);
             _setTokenURI(newItemId, nodeRunnerTokenURI);
-            approve(address(this), newItemId);
-            setApprovalForAll(marketplaceAddress, true);
+            _approve(address(this), newItemId);
+            _setApprovalForAll(receiver, marketplaceAddress, true);
 
             mintedNFTIds[i] = newItemId;
 
-            emit nodeRunnerNFTMinted(msg.sender, newItemId);
+            emit nodeRunnerNFTMinted(receiver, newItemId);
         }
 
         return mintedNFTIds;
     }
+
+    /**
+    * @dev Allows someone to mint a Node Runner NFT by paying USDC
+    * @param nftCount the number of NFTs to mint
+    * @return newItemIds the ID(s) of the newly minted Node Runner NFT(s)
+     */
+    function mintNodeRunnerNFT(uint256 nftCount) external whenNotPaused returns (uint[] memory) {
+        require(nftCount > 0, "You have to mint at least one Node Runner NFT.");
+        require(nftCount + _tokenIds.current() <= maxNFTs, "There aren't enough Node Runner NFTs for this node for you to mint you amount you chose. Another node will be available soon!");
+        require(cardinalNFT.addressIsMember(msg.sender), "Only Cardinal Crew Members can participate in Node Runner.");
+        require(USDC.balanceOf(msg.sender) >= NFTPriceInUSDC * nftCount, "You don't have enough USDC to pay for the Node Runner NFT(s).");
+        require(USDC.allowance(msg.sender, address(this)) >= NFTPriceInUSDC * nftCount, "You haven't approved this contract to spend enough of your USDC to pay for the Node Runner NFT(s).");
+
+        USDC.transferFrom(msg.sender, address(this), NFTPriceInUSDC * nftCount);
+        
+        return _mintNodeRunnerNFT(nftCount, msg.sender);
+    }
+
+    /**
+    * @dev Only owner function to mint NFTs to users for price balancing.
+    * @param nftCount number of NFTs to mint
+    * @param receiver the receiver of the NFTs upon minting
+    * @return newItemIds the ID(s) of the newly minted Node Runner NFT(s)
+    */
+    function ownerMintNodeRunnerNFT(uint256 nftCount, address receiver) external onlyOwner returns (uint[] memory) {
+        require(nftCount > 0, "You have to mint at least one Node Runner NFT.");
+        require(cardinalNFT.addressIsMember(receiver), "Receiving user is not a Cardinal Crew Member.");
+        return _mintNodeRunnerNFT(nftCount, receiver);
+    } 
 
     /**
     * @dev Only owner function to mint a new NFT.
@@ -125,15 +163,39 @@ contract NodeRunner is ERC721URIStorage, ERC721Enumerable, Ownable {
     * @dev Function to deposit rewards in Matic from the node into the contract for NFT holders to claim.
     */
     function depositNodeRewards() external payable {
-        require(msg.value >= maxNFTs, "You must deposit enough Matic so it can be divided by the maximum number of NFT holders for the node.");
+        require(msg.value >= _tokenIds.current(), "You must deposit enough Matic so it can be divided by the number of NFT holders for the node.");
         require(_tokenIds.current() > 0, "No NFTs have been minted for this node yet.");
 
         for (uint i = 1; i <= _tokenIds.current(); i++) {
             address NFTOwner = ownerOf(i);
-            addressToMaticCanClaim[NFTOwner] = addressToMaticCanClaim[NFTOwner] + (msg.value / maxNFTs);
+            addressToMaticCanClaim[NFTOwner] = addressToMaticCanClaim[NFTOwner] + (msg.value / _tokenIds.current());
         }
 
         emit nodeRewardsDeposited(msg.value);
+    }
+
+    /**
+    * @dev Function to deposit rewards in Matic in chunks from the node into the contract for NFT holders to claim.
+    * @param startIndex the first index to deposit rewards for with this chunk.
+    * @param endIndex the last index to deposit rewards for with this chunk.
+    */
+    function depositNodeRewardsInChunks(uint256 startIndex, uint256 endIndex) external payable {
+        if (endIndex > _tokenIds.current()) {
+            endIndex = _tokenIds.current();
+        }
+        require(endIndex > startIndex, "endIndex must be greater than startIndex");
+        require(startIndex > 0, "startIndex must be greater than 0.");
+        uint256 numNFTs = endIndex - startIndex + 1;
+
+        require(msg.value >= numNFTs, "You must deposit enough Matic so it can be divided by the number of NFT holders based on the current chunk size.");
+        require(_tokenIds.current() > 0, "No NFTs have been minted for this node yet.");
+
+        for (uint i = startIndex; i <= endIndex; i++) {
+            address NFTOwner = ownerOf(i);
+            addressToMaticCanClaim[NFTOwner] = addressToMaticCanClaim[NFTOwner] + (msg.value / numNFTs);
+        }
+
+        emit nodeRewardsDepositedChunk(msg.value, startIndex, endIndex);
     }
 
     /**
@@ -206,7 +268,7 @@ contract NodeRunner is ERC721URIStorage, ERC721Enumerable, Ownable {
 
     /**
     * @dev updates the Node Runner NFT token URI
-    * @param newNodeRunnerTokenURI the new type ID of the Node Runner NFTs
+    * @param newNodeRunnerTokenURI the new token URI for the Node Runner NFTs
      */
     function updateNodeRunnerTokenURI(string memory newNodeRunnerTokenURI) external onlyOwner {
         nodeRunnerTokenURI = newNodeRunnerTokenURI;
@@ -274,7 +336,7 @@ contract NodeRunner is ERC721URIStorage, ERC721Enumerable, Ownable {
     * @dev function for the marketplace to determine if an address is a Cardinal Crew member.
     * @param user the address to check the Cardinal Crew membership of
     */
-    function addressIsMember(address user) external returns (bool) {
+    function addressIsMember(address user) external view returns (bool) {
         return cardinalNFT.addressIsMember(user);
     }
 

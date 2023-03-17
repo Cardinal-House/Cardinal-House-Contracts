@@ -60,6 +60,82 @@ def test_user_can_purchase_node_runner_NFT():
     userTokenIdByIndex = nodeRunner.tokenOfOwnerByIndex(account2.address, 0)
     assert userTokenIdByIndex == 1
 
+def test_owner_can_pause_minting():
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("This test is only for local blockchains.")
+
+    account = retrieve_account()
+    account2 = retrieve_account(2)
+    cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house()
+    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
+    uniswapPair = cardinalToken.uniswapPair()
+    cardinalToken.transfer(uniswapPair, LIQUIDITY_SUPPLY, {"from": account})
+    cardinalToken.setContractTokenDivisor(1, {"from": account})
+
+    listingFee = 1000
+    maxNFTs = 20
+    NFTPrice = 10000
+    testTokenURI = "Test Token URI"
+    nodeRunner = deploy_node_runner(cardinalHouseMarketplace.address, cardinalNFT.address, cardinalToken.address, listingFee, maxNFTs, NFTPrice)
+    cardinalToken.excludeUserFromFees(nodeRunner.address, {"from": account})
+    nodeRunner.updateNodeRunnerTokenURI(testTokenURI, {"from": account})
+
+    # Act
+    cardinalToken.transfer(account2.address, NFTPrice * 2, {"from": account})
+    cardinalNFT.setAdminUser(account.address, True, {"from": account})
+    cardinalNFT.addMember(account2.address, {"from": account})
+
+    cardinalToken.approve(nodeRunner.address, NFTPrice, {"from": account2})
+    nodeRunner.mintNodeRunnerNFT(1, {"from": account2})
+
+    with pytest.raises(exceptions.VirtualMachineError) as ex:
+        nodeRunner.pauseMinting({"from": account2})
+    assert "revert: Ownable: caller is not the owner" in str(ex.value)
+
+    with pytest.raises(exceptions.VirtualMachineError) as ex:
+        nodeRunner.unpauseMinting({"from": account2})
+    assert "revert: Ownable: caller is not the owner" in str(ex.value)
+
+    nodeRunner.pauseMinting({"from": account})
+
+    cardinalToken.approve(nodeRunner.address, NFTPrice, {"from": account2})
+    with pytest.raises(exceptions.VirtualMachineError) as ex:
+        nodeRunner.mintNodeRunnerNFT(1, {"from": account2})
+    assert "revert: Pausable: paused" in str(ex.value)
+
+    nodeRunner.unpauseMinting({"from": account})
+
+    nodeRunner.mintNodeRunnerNFT(1, {"from": account2})
+
+    # Assert
+    assert nodeRunner.nodeRunnerTokenURI() == testTokenURI
+    assert cardinalToken.balanceOf(account2.address) == 0
+    assert cardinalToken.balanceOf(nodeRunner.address) == NFTPrice * 2
+    assert nodeRunner.maxNFTs() == maxNFTs
+    assert nodeRunner.NFTPriceInUSDC() == NFTPrice
+    assert nodeRunner.marketplaceAddress() == cardinalHouseMarketplace.address
+    assert nodeRunner._tokenIds() == 2
+    assert nodeRunner.tokenURI(1) == testTokenURI
+    assert nodeRunner.tokenURI(2) == testTokenURI
+    assert nodeRunner.ownerOf(1) == account2.address
+    assert nodeRunner.ownerOf(2) == account2.address
+    assert nodeRunner.tokenIdToListingFee(1) == listingFee
+    assert nodeRunner.tokenIdToListingFee(2) == listingFee
+
+    userTokenURIs = nodeRunner.getUserTokenURIs(account2.address)
+    assert len(userTokenURIs) == 2
+
+    userTokenIDs = nodeRunner.getUserTokenIDs(account2.address)
+    assert len(userTokenIDs) == 2
+    assert userTokenIDs[0] == 1
+    assert userTokenIDs[1] == 2
+
+    userTokenIdByIndex = nodeRunner.tokenOfOwnerByIndex(account2.address, 0)
+    assert userTokenIdByIndex == 1
+    userTokenIdByIndex = nodeRunner.tokenOfOwnerByIndex(account2.address, 1)
+    assert userTokenIdByIndex == 2
+
 def test_user_cant_purchase_NFT_unless_member():
     # Arrange
     if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
@@ -304,6 +380,88 @@ def test_owner_can_create_NFTs():
         nodeRunner.transferFrom(account.address, account2.address, tokenId, {"from": account})
 
     nodeRunner.depositNodeRewards({"from": account, "value": depositAmount})
+
+    # Assert
+    assert nodeRunner._tokenIds() == account1NFTCount + account2NFTCount
+    assert nodeRunner.addressToMaticCanClaim(account.address) == depositAmount * (account1NFTCount / (account1NFTCount + account2NFTCount))
+    assert nodeRunner.addressToMaticCanClaim(account2.address) == depositAmount * (account2NFTCount / (account1NFTCount + account2NFTCount))
+
+def test_rewards_can_deposit_in_chunks():
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("This test is only for local blockchains.")
+
+    account = retrieve_account()
+    account2 = retrieve_account(2)
+    cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house()
+    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
+    uniswapPair = cardinalToken.uniswapPair()
+    cardinalToken.transfer(uniswapPair, LIQUIDITY_SUPPLY, {"from": account})
+    cardinalToken.setContractTokenDivisor(1, {"from": account})
+
+    listingFee = 1000
+    maxNFTs = 20
+    NFTPrice = 10000
+    nodeRunner = deploy_node_runner(cardinalHouseMarketplace.address, cardinalNFT.address, cardinalToken.address, listingFee, maxNFTs, NFTPrice)
+
+    # Act
+    account1NFTCount = 15
+    account2NFTCount = 5
+    depositAmount = 1000
+    cardinalToken.transfer(account2.address, NFTPrice * account2NFTCount, {"from": account})
+    cardinalNFT.setAdminUser(account.address, True, {"from": account})
+    cardinalNFT.addMember(account.address, {"from": account})
+    cardinalNFT.addMember(account2.address, {"from": account})
+
+    for i in range(account1NFTCount):
+        nodeRunner.createToken("test token URI", {"from": account})
+    
+    for i in range(account2NFTCount):
+        tokenId = nodeRunner.createToken("test token URI", {"from": account}).return_value
+        nodeRunner.transferFrom(account.address, account2.address, tokenId, {"from": account})
+
+    nodeRunner.depositNodeRewardsInChunks(1, maxNFTs / 2, {"from": account, "value": depositAmount / 2})
+    nodeRunner.depositNodeRewardsInChunks(maxNFTs / 2 + 1, maxNFTs, {"from": account, "value": depositAmount / 2})
+
+    # Assert
+    assert nodeRunner._tokenIds() == account1NFTCount + account2NFTCount
+    assert nodeRunner.addressToMaticCanClaim(account.address) == depositAmount * (account1NFTCount / (account1NFTCount + account2NFTCount))
+    assert nodeRunner.addressToMaticCanClaim(account2.address) == depositAmount * (account2NFTCount / (account1NFTCount + account2NFTCount))
+
+def test_owner_can_mint_NFTs_for_others():
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("This test is only for local blockchains.")
+
+    account = retrieve_account()
+    account2 = retrieve_account(2)
+    cardinalToken, cardinalHousePreSale, _ = deploy_cardinal_house()
+    cardinalHouseMarketplace, cardinalNFT = deploy_cardinal_house_marketplace(cardinalToken.address, cardinalHousePreSale.address)
+    uniswapPair = cardinalToken.uniswapPair()
+    cardinalToken.transfer(uniswapPair, LIQUIDITY_SUPPLY, {"from": account})
+    cardinalToken.setContractTokenDivisor(1, {"from": account})
+
+    listingFee = 1000
+    maxNFTs = 20
+    NFTPrice = 10000
+    nodeRunner = deploy_node_runner(cardinalHouseMarketplace.address, cardinalNFT.address, cardinalToken.address, listingFee, maxNFTs, NFTPrice)
+
+    # Act
+    account1NFTCount = 15
+    account2NFTCount = 5
+    depositAmount = 1000
+    cardinalToken.transfer(account2.address, NFTPrice * account2NFTCount, {"from": account})
+    cardinalNFT.setAdminUser(account.address, True, {"from": account})
+    cardinalNFT.addMember(account.address, {"from": account})
+    cardinalNFT.addMember(account2.address, {"from": account})
+
+    nodeRunner.ownerMintNodeRunnerNFT(account1NFTCount, account.address, {"from": account})
+    nodeRunner.ownerMintNodeRunnerNFT(account2NFTCount, account2.address, {"from": account})
+
+    nodeRunner.depositNodeRewardsInChunks(1, maxNFTs / 4, {"from": account, "value": depositAmount / 4})
+    nodeRunner.depositNodeRewardsInChunks(maxNFTs / 4 + 1, maxNFTs / 2, {"from": account, "value": depositAmount / 4})
+    nodeRunner.depositNodeRewardsInChunks(maxNFTs / 2 + 1, maxNFTs * 3 / 4, {"from": account, "value": depositAmount / 4})
+    nodeRunner.depositNodeRewardsInChunks(maxNFTs * 3 / 4 + 1, maxNFTs, {"from": account, "value": depositAmount / 4})
 
     # Assert
     assert nodeRunner._tokenIds() == account1NFTCount + account2NFTCount
